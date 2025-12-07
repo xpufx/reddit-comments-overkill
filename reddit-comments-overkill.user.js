@@ -434,7 +434,7 @@
 		// Wait if we're currently rate limited
 		await waitForRateLimit();
 		
-		// If wrong sort, switch - we always reload now
+		// Check if we're already on the correct sort
 		const cur = getCurrentSort();
 		if (cur !== sort) {
 			log("Current sort is", cur, "but need", sort, "waiting before navigation to prevent rate limits");
@@ -444,11 +444,13 @@
 			// Wait a bit to allow navigation to start before this script context ends
 			await sleep(5000); // 5 second wait (increased from 2 seconds)
 			return false; // let reload happen since we're using URL navigation
+		} else {
+			log("Already on correct sort:", sort, "starting processing immediately");
 		}
 
 		log("Processing sort:", sort);
 
-		// Wait for comments to appear on the newly sorted page
+		// Wait for comments to appear on the current page
 		const initialDeletes = getDeleteButtons();
 		if (initialDeletes.length === 0) {
 			log("No delete buttons found, waiting for comments to load...");
@@ -476,7 +478,7 @@
 
 	
 
-	/***********************
+	/*************************
 	 * MAIN LOOP
 	 ************************/
 	async function main() {
