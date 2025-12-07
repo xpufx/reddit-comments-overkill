@@ -3,7 +3,7 @@
 A browser userscript that automatically deletes all your Reddit comments across multiple sort types while conservatively adhering to Reddit's rate limits.
 
 ## **WARNING** 
-- **AI coding using LLM Agents**
+**AI coding using LLM Agents**
 
 ## What It Does
 
