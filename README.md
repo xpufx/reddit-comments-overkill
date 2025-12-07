@@ -9,12 +9,10 @@ A powerful userscript that automatically deletes all your Reddit comments across
 - **Rate limit handling** - Detects 429 responses and implements exponential backoff
 - **Recent comment protection** - Preserves comments from the last 10 days (configurable)
 - **Cross-platform compatibility** - Works on both old.reddit.com and www.reddit.com
-- **Resume capability** - Automatically resumes if page reloads during operation
 - **Real-time status display** - Shows progress, rate limit status, and recent activity
 
 ## What Makes It Unique
 
-- **State persistence across page reloads** - Uses URL parameters to maintain progress
 - **Intelligent rate limiting** - Exponential backoff with configurable multipliers
 - **Date-based filtering** - Protects recent comments while deleting older ones
 - **Comprehensive logging** - Real-time status display with newest messages first
@@ -108,7 +106,6 @@ The script automatically handles Reddit's rate limiting:
 - **Date protection** - Never deletes comments newer than configured threshold
 - **Confirmation required** - Each deletion requires explicit "yes" confirmation
 - **Error recovery** - Retries failed deletions with exponential backoff
-- **State preservation** - Can resume after page reloads or crashes
 - **Manual control** - Start/stop button for immediate control
 
 ## Troubleshooting
@@ -128,31 +125,12 @@ The script automatically handles Reddit's rate limiting:
 - Consider increasing `SHORT_DELAY_*` values for more conservative timing
 - Rate limit multiplier increases with each 429 response
 
-### Page reloads during operation
-- The script automatically resumes using URL state parameters
-- Progress is preserved across page reloads
-- No manual intervention required
-
-## Development
-
-### Testing
-```bash
-# Install dependencies
-npm install
-
-# Run tests with JSDOM
-node jsdom.js
-```
-
 ### Contributing
-Feel free to submit issues and enhancement requests. When contributing code:
-1. Follow the existing code style
-2. Test thoroughly with the JSDOM setup
-3. Update documentation for any new features
+1. Not at this time
 
 ## License
 
-This project is provided as-is for educational and personal use. Use responsibly and in accordance with Reddit's Terms of Service.
+This project is provided as-is for educational and personal use. 
 
 ## Disclaimer
 
