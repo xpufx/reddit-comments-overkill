@@ -130,21 +130,9 @@ The script automatically handles Reddit's rate limiting:
 
 ## License
 
-This project is licensed under the GNU General Public License v2.0 (GPL v2). See the [LICENSE](LICENSE) file for details.
+This project is licensed under the GNU General Public License v2.0 (GPL v2).
 
-### GPL v2 Summary
-- You are free to use, modify, and distribute this software
-- If you distribute copies or modified versions, you must also distribute the source code
-- Any derivative works must also be licensed under the GPL v2
-- This software is provided without warranty
-
-Copyright (C) 2025 xpufx
-
-### GPL v2 Summary
-- You are free to use, modify, and distribute this software
-- If you distribute copies or modified versions, you must also distribute the source code
-- Any derivative works must also be licensed under the GPL v2
-- This software is provided without warranty 
+Copyright (C) 2025 xpufx 
 
 ## Disclaimer
 
