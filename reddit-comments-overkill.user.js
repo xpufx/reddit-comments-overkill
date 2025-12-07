@@ -495,8 +495,12 @@
 		}
 
 		// Use URL parameter for sort index as primary source when resuming
+		// Check if we're resuming based on URL parameters, not the running variable
+		const isResuming = getRunningStateFromUrl();
 		let idx = 0;
-		if (running) {
+		
+		if (isResuming) {
+			// When resuming from URL state
 			const urlIdx = getSortIndexFromUrl();
 			// Find the corresponding sort in activeSorts
 			if (urlIdx > 0 && urlIdx <= SORTS.length) {
@@ -517,12 +521,22 @@
 		} else {
 			// When starting fresh, check current page's sort and start from there if it's selected
 			const currentSort = getCurrentSort();
-			if (selectedSortTypes[currentSort] || Object.keys(selectedSortTypes).length === 0) {
+			if (selectedSortTypes[currentSort]) {
 				// Find the index of the current sort in activeSorts
 				const currentSortIndex = activeSorts.indexOf(currentSort);
 				if (currentSortIndex !== -1) {
 					idx = currentSortIndex;
 					log("Starting from current sort:", currentSort);
+				}
+			} else if (Object.keys(selectedSortTypes).length === 0) {
+				// If no sorts were specifically selected (shouldn't happen when starting fresh via modal,
+				// but could happen in other scenarios), start from current sort if it's in the default list
+				if (activeSorts.includes(currentSort)) {
+					const currentSortIndex = activeSorts.indexOf(currentSort);
+					if (currentSortIndex !== -1) {
+						idx = currentSortIndex;
+						log("Starting from current sort (fallback):", currentSort);
+					}
 				}
 			} else {
 				// If current sort is not selected, find the first selected sort that appears after current sort in original order
@@ -839,6 +853,7 @@
 		
 		// Handle cancel button
 		cancelBtn.onclick = () => {
+			running = false; // Reset running state when canceling
 			document.body.removeChild(modal);
 			// Reset the button text back to Start Deleting
 			btn.textContent = "Start Deleting";
@@ -848,6 +863,11 @@
 		startBtn.onclick = () => {
 			// Save selected sorts to a global variable or pass to the main function
 			selectedSortTypes = selectedSorts;
+			// Make sure running is true when starting
+			running = true;
+			// Update URL state to indicate we're running
+			updateUrlState(running, 0);
+			
 			document.body.removeChild(modal);
 			
 			// Update button text after starting
@@ -921,8 +941,9 @@
 	});
 
 	// Check if the script should start automatically based on URL state
-	if (running) {
+	if (getRunningStateFromUrl()) {
 		log("Resuming from previous state");
+		running = true; // Ensure running is true when resuming
 		// Update button to reflect running status
 		btn.textContent = "Stop Deleting";
 		
