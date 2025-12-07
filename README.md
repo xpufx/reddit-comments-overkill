@@ -2,7 +2,8 @@
 
 A powerful userscript that automatically deletes all your Reddit comments across multiple sort types while being respectful of Reddit's rate limits.
 
-**WARNING** Coded using LLMs and tested manually.
+**WARNING** 
+Coded using LLMs and tested manually.
 
 ## What It Does
 
