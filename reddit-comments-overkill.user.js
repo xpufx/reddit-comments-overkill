@@ -1,13 +1,23 @@
-// ==UserScript==
-// @name         Reddit Comment Overkill — Stable Sort Cycling Edition
-// @namespace    https://example.com/
-// @version      2.21
-// @description  Deletes all comments by cycling sorts reliably, retrying on rate limits, waiting for comments, handling infinite scroll & next page, with Start/Stop control.
-// @match        https://old.reddit.com/user/*/comments*
-// @match        https://www.reddit.com/user/*/comments*
-// @grant        none
 // @run-at       document-idle
 // ==/UserScript==
+
+// ==LICENSE==
+// Copyright (C) 2025 xpufx
+//
+// This program is free software; you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation; either version 2 of the License, or
+// (at your option) any later version.
+//
+// This program is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+//
+// You should have received a copy of the GNU General Public License along
+// with this program; if not, write to the Free Software Foundation, Inc.,
+// 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
+// ==/LICENSE==
 
 /*
  CORE RULES IMPLEMENTED:
