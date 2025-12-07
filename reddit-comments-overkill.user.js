@@ -1,3 +1,11 @@
+// ==UserScript==
+// @name         Reddit Comment Overkill — Stable Sort Cycling Edition
+// @namespace    https://example.com/
+// @version      2.21
+// @description  Deletes all comments by cycling sorts reliably, retrying on rate limits, waiting for comments, handling infinite scroll & next page, with Start/Stop control.
+// @match        https://old.reddit.com/user/*/comments*
+// @match        https://www.reddit.com/user/*/comments*
+// @grant        none
 // @run-at       document-idle
 // ==/UserScript==
 
