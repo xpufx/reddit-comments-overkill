@@ -482,26 +482,104 @@
 	 * MAIN LOOP
 	 ************************/
 	async function main() {
+		// Use selected sorts if available, otherwise default to all sorts
+		const activeSorts = Object.keys(selectedSortTypes).length > 0 
+			? SORTS.filter(sort => selectedSortTypes[sort]) 
+			: SORTS;
+		
+		if (activeSorts.length === 0) {
+			log("No sorts selected, nothing to process.");
+			statusDisplay.updateField('status', 'No sorts selected');
+			btn.textContent = "Start Deleting";
+			return;
+		}
+
 		// Use URL parameter for sort index as primary source when resuming
 		let idx = 0;
 		if (running) {
-			idx = getSortIndexFromUrl();
+			const urlIdx = getSortIndexFromUrl();
+			// Find the corresponding sort in activeSorts
+			if (urlIdx > 0 && urlIdx <= SORTS.length) {
+				const urlSort = SORTS[urlIdx - 1]; // Adjust for 0-based index
+				if (urlSort && activeSorts.includes(urlSort)) {
+					idx = activeSorts.indexOf(urlSort);
+				} else {
+					// If the URL sort isn't in active sorts, find the next valid one
+					for (let i = 0; i < activeSorts.length; i++) {
+						const activeSortOriginalIndex = SORTS.indexOf(activeSorts[i]);
+						if (activeSortOriginalIndex >= (urlIdx - 1)) {
+							idx = i;
+							break;
+						}
+					}
+				}
+			}
+		} else {
+			// When starting fresh, check current page's sort and start from there if it's selected
+			const currentSort = getCurrentSort();
+			if (selectedSortTypes[currentSort] || Object.keys(selectedSortTypes).length === 0) {
+				// Find the index of the current sort in activeSorts
+				const currentSortIndex = activeSorts.indexOf(currentSort);
+				if (currentSortIndex !== -1) {
+					idx = currentSortIndex;
+					log("Starting from current sort:", currentSort);
+				}
+			} else {
+				// If current sort is not selected, find the first selected sort that appears after current sort in original order
+				const currentSortOriginalIndex = SORTS.indexOf(currentSort);
+				for (let i = 0; i < activeSorts.length; i++) {
+					const activeSortOriginalIndex = SORTS.indexOf(activeSorts[i]);
+					if (activeSortOriginalIndex >= currentSortOriginalIndex) {
+						idx = i;
+						log("Current sort not selected, starting from:", activeSorts[idx]);
+						break;
+					}
+				}
+			}
 		}
 
-		log("Starting from sort index: " + idx + " (" + (SORTS[idx] || 'unknown') + ")");
+		log("Starting from sort index: " + idx + " (" + (activeSorts[idx] || 'unknown') + ")");
 		log("Current URL state - running: " + running + ", sort index: " + idx);
+		log("Active sorts:", activeSorts);
 
 		// Update status display
 		statusDisplay.updateField('status', 'Running');
-		statusDisplay.updateField('currentSort', SORTS[idx] || 'unknown');
-		statusDisplay.updateField('sortProgress', (idx + 1) + '/' + SORTS.length);
+		statusDisplay.updateField('currentSort', activeSorts[idx] || 'unknown');
+		statusDisplay.updateField('sortProgress', (idx + 1) + '/' + activeSorts.length);
+
+		// Track which sorts have been completed to skip them if we encounter them again
+		const completedSorts = new Set();
+
+		// Mark all previous sorts as completed if starting from a middle position
+		for (let i = 0; i < idx; i++) {
+			if (i < activeSorts.length) {
+				completedSorts.add(activeSorts[i]);
+			}
+		}
 
 		while (running) {
 			try {
 				// Wait if we're currently rate limited
 				await waitForRateLimit();
 				
-				const sort = SORTS[idx];
+				// Find next non-completed sort
+				while (idx < activeSorts.length && completedSorts.has(activeSorts[idx])) {
+					log("Skipping already completed sort:", activeSorts[idx]);
+					idx++;
+				}
+				
+				if (idx >= activeSorts.length) {
+					log("ALL SELECTED SORTS PROCESSED — no more comments.");
+					running = false;
+					// Update status and button state when all sorts are complete
+					statusDisplay.updateField('status', 'Complete - All sorts processed');
+					updateUrlState(false, 0);
+					btn.textContent = "Start Deleting";
+					log("All selected sorts completed, clearing state");
+					break;
+				}
+
+				const sort = activeSorts[idx];
 
 				log("Processing sort: " + sort + " at index: " + idx);
 				statusDisplay.updateField('currentSort', sort);
@@ -509,23 +587,25 @@
 				if (!running) break;
 
 				if (finished) {
+					completedSorts.add(sort);
 					idx++;
 					log("Finished " + sort + " sort, advancing to index: " + idx);
-					// Update URL state for page reload recovery
-					updateUrlState(running, idx);
-					log("Updated URL state - running: " + running + ", sort index: " + idx);
+					// Update URL state for page reload recovery using the original SORTS index
+					const totalSortsIndex = SORTS.indexOf(sort) + 1;
+					updateUrlState(running, totalSortsIndex);
+					log("Updated URL state - running: " + running + ", sort index: " + totalSortsIndex);
 					// Update progress in status display
-					statusDisplay.updateField('sortProgress', (idx + 1) + '/' + SORTS.length);
+					statusDisplay.updateField('sortProgress', (idx + 1) + '/' + activeSorts.length);
 				}
 				
-				if (idx >= SORTS.length) {
-					log("ALL SORTS PROCESSED — no more comments.");
+				if (idx >= activeSorts.length) {
+					log("ALL SELECTED SORTS PROCESSED — no more comments.");
 					running = false;
 					// Update status and button state when all sorts are complete
 					statusDisplay.updateField('status', 'Complete - All sorts processed');
 					updateUrlState(false, 0);
 					btn.textContent = "Start Deleting";
-					log("All sorts completed, clearing state");
+					log("All selected sorts completed, clearing state");
 					break;
 				}
 
@@ -659,6 +739,131 @@
 	statusDisplay.registerField('sortProgress', 'Sort Progress');
 
 	/***********************
+	 * SORT SELECTION MODAL
+	 ************************/
+	function createSortSelectionModal() {
+		const modal = document.createElement("div");
+		modal.style.cssText = `
+			position: fixed;
+			top: 0;
+			left: 0;
+			width: 100%;
+			height: 100%;
+			background: rgba(0, 0, 0, 0.7);
+			display: flex;
+			justify-content: center;
+			align-items: center;
+			z-index: 999997;
+		`;
+		
+		const content = document.createElement("div");
+		content.style.cssText = `
+			background: white;
+			padding: 20px;
+			border-radius: 8px;
+			min-width: 300px;
+			max-width: 500px;
+			box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+		`;
+		
+		const title = document.createElement("h3");
+		title.textContent = "Select Sort Types to Delete From";
+		title.style.cssText = "margin-top: 0; margin-bottom: 15px;";
+		content.appendChild(title);
+		
+		const checkboxesContainer = document.createElement("div");
+		checkboxesContainer.style.cssText = "margin-bottom: 20px;";
+		
+		// Create checkboxes for each sort type
+		const selectedSorts = {};
+		for (const sort of SORTS) {
+			const checkboxDiv = document.createElement("div");
+			checkboxDiv.style.cssText = "margin-bottom: 8px; display: flex; align-items: center;";
+			
+			const checkbox = document.createElement("input");
+			checkbox.type = "checkbox";
+			checkbox.id = `sort-${sort}`;
+			checkbox.value = sort;
+			checkbox.checked = true; // Default to checked
+			selectedSorts[sort] = true;
+			
+			const label = document.createElement("label");
+			label.htmlFor = `sort-${sort}`;
+			label.textContent = sort.charAt(0).toUpperCase() + sort.slice(1); // Capitalize first letter
+			label.style.cssText = "margin-left: 8px;";
+			
+			checkboxDiv.appendChild(checkbox);
+			checkboxDiv.appendChild(label);
+			checkboxesContainer.appendChild(checkboxDiv);
+			
+			// Update selectedSorts when checkbox changes
+			checkbox.addEventListener('change', function() {
+				selectedSorts[sort] = this.checked;
+			});
+		}
+		
+		content.appendChild(checkboxesContainer);
+		
+		const buttonContainer = document.createElement("div");
+		buttonContainer.style.cssText = "display: flex; justify-content: flex-end; gap: 10px;";
+		
+		const startBtn = document.createElement("button");
+		startBtn.textContent = "Start Deleting";
+		startBtn.style.cssText = `
+			padding: 8px 16px;
+			background: #ff4500;
+			color: white;
+			border: none;
+			border-radius: 4px;
+			cursor: pointer;
+		`;
+		
+		const cancelBtn = document.createElement("button");
+		cancelBtn.textContent = "Cancel";
+		cancelBtn.style.cssText = `
+			padding: 8px 16px;
+			background: #ccc;
+			color: #333;
+			border: none;
+			border-radius: 4px;
+			cursor: pointer;
+		`;
+		
+		buttonContainer.appendChild(cancelBtn);
+		buttonContainer.appendChild(startBtn);
+		content.appendChild(buttonContainer);
+		modal.appendChild(content);
+		
+		// Add modal to document
+		document.body.appendChild(modal);
+		
+		// Handle cancel button
+		cancelBtn.onclick = () => {
+			document.body.removeChild(modal);
+			// Reset the button text back to Start Deleting
+			btn.textContent = "Start Deleting";
+		};
+		
+		// Handle start button
+		startBtn.onclick = () => {
+			// Save selected sorts to a global variable or pass to the main function
+			selectedSortTypes = selectedSorts;
+			document.body.removeChild(modal);
+			
+			// Update button text after starting
+			btn.textContent = "Stop Deleting";
+			
+			// Update status when starting
+			statusDisplay.updateField('status', 'Running');
+			
+			// Start the main loop with selected sorts
+			main();
+		};
+		
+		return modal;
+	}
+
+	/***********************
 	 * BUTTON
 	 ************************/
 	const btn = document.createElement("button");
@@ -680,22 +885,33 @@
 
 	// Store references for cleanup
 	let mainLoopPromise = null;
+	let selectedSortTypes = {}; // Store user's selected sorts
 
 	// Set initial button state based on URL running state
 	btn.textContent = getRunningStateFromUrl() ? "Stop Deleting" : "Start Deleting";
 
 	btn.onclick = () => {
 		running = !running;
-		updateUrlState(running, 0); // Sort index 0 when starting fresh
-		btn.textContent = running ? "Stop Deleting" : "Start Deleting";
 		if (running) {
-			// Update status when starting
-			statusDisplay.updateField('status', 'Running');
-			main();
+			// Show sort selection modal when starting fresh
+			// If resuming from URL state, skip modal and directly start main()
+			if (getRunningStateFromUrl()) {
+				// If resuming, use default selectedSortTypes for all sorts
+				for (const sort of SORTS) {
+					selectedSortTypes[sort] = true;
+				}
+				btn.textContent = "Stop Deleting";
+				statusDisplay.updateField('status', 'Running');
+				main();
+			} else {
+				// Show sort selection modal when starting fresh
+				createSortSelectionModal();
+			}
 		} else {
 			// Update status when stopping
 			statusDisplay.updateField('status', 'Stopped');
 			updateUrlState(false, 0);
+			btn.textContent = "Start Deleting";
 		}
 	};
 
@@ -709,6 +925,12 @@
 		log("Resuming from previous state");
 		// Update button to reflect running status
 		btn.textContent = "Stop Deleting";
+		
+		// When resuming, use all sorts by default
+		for (const sort of SORTS) {
+			selectedSortTypes[sort] = true;
+		}
+		
 		main();
 	}
 
