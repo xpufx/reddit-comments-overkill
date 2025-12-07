@@ -1,9 +1,9 @@
 # Reddit Comment Overkill
 
-A powerful userscript that automatically deletes all your Reddit comments across multiple sort types while being respectful of Reddit's rate limits.
+A browser userscript that automatically deletes all your Reddit comments across multiple sort types while conservatively adhering to Reddit's rate limits.
 
-**WARNING** 
-- Coded using LLMs and tested manually.
+## **WARNING** 
+- ** AI coding using LLM Agents
 
 ## What It Does
 
