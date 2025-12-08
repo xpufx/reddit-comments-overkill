@@ -471,7 +471,7 @@
 		if (cur !== sort) {
 			log("Current sort is", cur, "but need", sort, "waiting before navigation to prevent rate limits");
 			// Wait before navigation to prevent rate limiting
-			await sleep(30000); // 30 second wait before navigation
+			await sleep(5000); // 5 second wait before navigation (reduced from 30 seconds)
 			gotoSort(sort);
 			// Wait a bit to allow navigation to start before this script context ends
 			await sleep(5000); // 5 second wait (increased from 2 seconds)
