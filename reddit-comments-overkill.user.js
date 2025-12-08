@@ -30,6 +30,7 @@
 	 * CONFIG
 	 ************************/
 	const SCRIPT_NAME = "Reddit Comment Overkill";
+	const LOGGING_ENABLED = true; // 设置为false禁用控制台日志
 	const SORTS = ["new", "hot", "top", "controversial"];
 	const WAIT_FOR_COMMENTS_MS = 8000;
 	const RATE_LIMIT_MIN = 60000;
@@ -42,8 +43,10 @@
 
 	// Logging function to consistently identify our script
 	function log(message, ...args) {
-		const logMessage = "[" + SCRIPT_NAME + "] " + message;
-		console.log(logMessage, ...args);
+		if (LOGGING_ENABLED) {
+			const logMessage = "[" + SCRIPT_NAME + "] " + message;
+			console.log(logMessage, ...args);
+		}
 	}
 
 	// Use URL parameter to maintain state across page reloads
@@ -77,10 +80,10 @@
 	// Initialize running state from URL
 	let running = getRunningStateFromUrl();
 
-	// Debug logging - use console.log directly to avoid circular dependency
-	console.log("[" + SCRIPT_NAME + "] Script loaded - URL parameters:", window.location.search);
-	console.log("[" + SCRIPT_NAME + "] Running state from URL:", running);
-	console.log("[" + SCRIPT_NAME + "] Current sort from URL:", getSortFromUrl());
+	// Debug logging
+	log("Script loaded - URL parameters:", window.location.search);
+	log("Running state from URL:", running);
+	log("Current sort from URL:", getSortFromUrl());
 
 	// Progress tracking is no longer needed since we use URL parameters
 
