@@ -18,18 +18,14 @@ This script helps you clean up your Reddit comment history by automatically find
 2. **Deletes comments safely** - Each deletion requires confirmation, just like manual deletion
 3. **Preserves recent comments** - Keeps comments from the last 10 days (you can change this)
 4. **Handles rate limits** - Automatically detects when Reddit is limiting requests and waits appropriately
-5. **Survives page reloads** - If you close the page or browser, it resumes where it left off
-6. **Provides clear feedback** - Shows progress in browser console and has a visual button indicator
 
 ## Key Features
 
 - **Complete coverage** - Cycles through all 4 sort types to find every comment
 - **Safe timing** - 1-second delay between deletions to avoid rate limits
 - **Date protection** - Never deletes comments newer than your configured threshold
-- **Reliable recovery** - Automatically resumes after page reloads or crashes
 - **Simple interface** - One button to start/stop, with visual feedback
-- **Cross-platform** - Works on both old.reddit.com and new Reddit
-
+  
 ## Installation
 
 ### Step-by-Step Guide
@@ -77,8 +73,6 @@ This script helps you clean up your Reddit comment history by automatically find
 ## Features
 
 - **Automatic Sort Cycling** - Processes all 4 sort types (`new`, `hot`, `top`, `controversial`) automatically
-- **URL State Persistence** - Single `comment_overkill_sort` parameter tracks progress across page reloads
-- **Current Sort Detection** - Starts from current page's sort and cycles through remaining sorts
 - **Dual Rate Limit Detection** - Monitors both fetch and XMLHttpRequest for 429 responses
 - **Visual Button Feedback** - Button shows "Reddit Comment Overkill" branding with color changes (orange→red) and pulsing animation when running
 - **Console Logging** - Detailed console output for monitoring without cluttered UI
