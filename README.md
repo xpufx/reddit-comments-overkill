@@ -9,6 +9,8 @@ A browser userscript that automatically deletes all your Reddit comments across 
 
 - **Bulk comment deletion** - Automatically deletes all your Reddit comments
 - **Smart sort cycling** - Cycles through `new → hot → top → controversial` to ensure complete coverage
+- **Sort selection** - Choose which sort types to process via modal dialog
+- **State persistence** - Automatically resumes from last position using URL parameters
 - **Rate limit handling** - Detects 429 responses and implements exponential backoff
 - **Recent comment protection** - Preserves comments from the last 10 days (configurable)
 - **Cross-platform compatibility** - Works on both old.reddit.com and www.reddit.com
@@ -40,13 +42,21 @@ A browser userscript that automatically deletes all your Reddit comments across 
 
 2. Click the **"Start Deleting"** button in the bottom-right corner
 
-3. The script will:
-   - Begin deleting comments starting with the "new" sort
+3. A modal will appear to select which sort types to process (default: all)
+4. The script will:
+   - Begin deleting comments starting from the current page's sort (if selected) or first selected sort
    - Show real-time progress in the status display
-   - Automatically cycle through all sort types
+   - Automatically cycle through selected sort types
    - Handle rate limits and pagination automatically
 
 4. To stop the process, click **"Stop Deleting"**
+
+## Features
+
+- **Sort Selection Modal** - Choose which sort types (`new`, `hot`, `top`, `controversial`) to process
+- **URL State Persistence** - Automatically resumes from last position if page reloads
+- **Current Sort Detection** - Starts from current page's sort when possible
+- **Selective Processing** - Skip sorts you've already completed
 
 ## Configuration
 
@@ -86,7 +96,8 @@ The script provides a real-time status display showing:
 - **Comments Deleted** - Total comments deleted in current session
 - **Recent Preserved** - Comments skipped due to date filtering
 - **Rate Limit Status** - Current rate limiting state
-- **Sort Progress** - Progress through sort types (e.g., "2/4")
+- **Sort Progress** - Progress through selected sort types (e.g., "2/4")
+- **Selected Sorts** - Which sort types are being processed
 - **Log Messages** - Recent activity (newest messages first)
 
 ## Rate Limiting

@@ -153,8 +153,13 @@
 			rateLimitMultiplier = Math.min(rateLimitMultiplier * 2, RATE_LIMIT_MAX / BASE_RATE_LIMIT_WAIT); // Double multiplier but cap it
 			
 			log("Rate limited, setting flag for " + (cappedWait / 1000) + " seconds, multiplier now: " + rateLimitMultiplier);
+		} else {
+			// Reset multiplier after successful response to avoid permanent slowdown
+			if (rateLimitMultiplier > 1) {
+				rateLimitMultiplier = 1;
+				log("Rate limit multiplier reset after successful response");
+			}
 		}
-		// Don't reduce multiplier on successful responses - only reset after a long period of no 429s
 		return resp;
 	};
 
@@ -487,6 +492,8 @@
 			? SORTS.filter(sort => selectedSortTypes[sort]) 
 			: SORTS;
 		
+		log("activeSorts after filtering:", activeSorts, "selectedSortTypes keys:", Object.keys(selectedSortTypes));
+		
 		if (activeSorts.length === 0) {
 			log("No sorts selected, nothing to process.");
 			statusDisplay.updateField('status', 'No sorts selected');
@@ -521,12 +528,16 @@
 		} else {
 			// When starting fresh, check current page's sort and start from there if it's selected
 			const currentSort = getCurrentSort();
+			log("Current page sort:", currentSort, "selectedSortTypes:", selectedSortTypes);
+			
 			if (selectedSortTypes[currentSort]) {
 				// Find the index of the current sort in activeSorts
 				const currentSortIndex = activeSorts.indexOf(currentSort);
 				if (currentSortIndex !== -1) {
 					idx = currentSortIndex;
 					log("Starting from current sort:", currentSort);
+				} else {
+					log("Current sort not found in activeSorts, starting from first selected sort");
 				}
 			} else if (Object.keys(selectedSortTypes).length === 0) {
 				// If no sorts were specifically selected (shouldn't happen when starting fresh via modal,
@@ -904,7 +915,6 @@
 	document.body.appendChild(btn);
 
 	// Store references for cleanup
-	let mainLoopPromise = null;
 	let selectedSortTypes = {}; // Store user's selected sorts
 
 	// Set initial button state based on URL running state
