@@ -37,6 +37,7 @@ This script helps you clean up your Reddit comment history by automatically find
 1. **Install a userscript manager** (if you don't have one):
    - For Chrome, Edge, or Firefox: Install [Tampermonkey](https://www.tampermonkey.net/)
    - For Firefox only: You can also use [Greasemonkey](https://www.greasespot.net/)
+   - **Note**: Tested with Violentmonkey - should work with other userscript managers too
 
 2. **Get the script**:
    - Click on the `reddit-comments-overkill.user.js` file in this repository
@@ -45,7 +46,7 @@ This script helps you clean up your Reddit comment history by automatically find
 
 3. **Install the script**:
    - Your userscript manager should detect the script and offer to install it
-   - If not, open Tampermonkey/Greasemonkey dashboard
+   - If not, open your userscript manager's dashboard
    - Click "Create a new script" or the "+" button
    - Paste the copied script
    - Save (Ctrl+S or click Save)
