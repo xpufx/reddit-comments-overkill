@@ -34,10 +34,11 @@
 	const WAIT_FOR_COMMENTS_MS = 8000;
 	const RATE_LIMIT_MIN = 60000;
 	const RATE_LIMIT_MAX = 1800000;
-	const SHORT_DELAY_MIN = 2000;
-	const SHORT_DELAY_MAX = 2000;
-	const LONG_DELAY_AFTER = [20, 40];
-	const LONG_DELAY_MS = [5000, 7000];
+	const SHORT_DELAY_MIN = 3000;
+	const SHORT_DELAY_MAX = 5000;
+	const MIN_DELAY_BETWEEN_DELETES = 2000; // Minimum 2 seconds between delete attempts
+	const LONG_DELAY_AFTER = [10, 20];
+	const LONG_DELAY_MS = [10000, 15000];
 	const DAYS_TO_PRESERVE = 10; // Keep comments from the last N days
 
 	// Logging function to consistently identify our script
@@ -139,7 +140,7 @@
 	window.fetch = async function(...args) {
 		const resp = await originalFetch(...args);
 		if (resp.status === 429) {
-			log("RATE LIMIT detected (429)");
+			log("RATE LIMIT detected (429) via fetch");
 			rateLimitActive = true;
 			lastRateLimitTime = Date.now();
 
@@ -157,6 +158,32 @@
 			}
 		}
 		return resp;
+	};
+
+	// -------- XMLHttpRequest monkey patch --------
+	const OriginalXHR = window.XMLHttpRequest;
+	window.XMLHttpRequest = class extends OriginalXHR {
+		constructor() {
+			super();
+			this.addEventListener('readystatechange', () => {
+				if (this.readyState === 4 && this.status === 429) {
+					log("RATE LIMIT detected (429) via XMLHttpRequest");
+					rateLimitActive = true;
+					lastRateLimitTime = Date.now();
+
+					// Calculate wait time with exponential backoff (up to max)
+					const baseWait = BASE_RATE_LIMIT_WAIT * rateLimitMultiplier;
+					const cappedWait = Math.min(baseWait, RATE_LIMIT_MAX);
+					rateLimitMultiplier = Math.min(rateLimitMultiplier * 2, RATE_LIMIT_MAX / BASE_RATE_LIMIT_WAIT); // Double multiplier but cap it
+
+					log("Rate limited, setting flag for " + (cappedWait / 1000) + " seconds, multiplier now: " + rateLimitMultiplier);
+				} else if (this.readyState === 4 && this.status !== 429 && rateLimitMultiplier > 1) {
+					// Reset multiplier after successful response to avoid permanent slowdown
+					rateLimitMultiplier = 1;
+					log("Rate limit multiplier reset after successful XHR response");
+				}
+			});
+		}
 	};
 
 
@@ -305,12 +332,21 @@
 	 ************************/
 	async function deleteComment(btn) {
 		let success = false;
+		let attempts = 0;
+		const maxAttempts = 3;
 
-		while (!success && running) {
+		// Find the comment element before attempting deletion
+		const commentElement = btn.closest('.comment, .thing, .entry, [id^=t1_]');
+		const commentId = commentElement ? commentElement.id || 'unknown' : 'unknown';
+
+		while (!success && running && attempts < maxAttempts) {
+			attempts++;
+			
 			// Wait if we're currently rate limited
 			await waitForRateLimit();
 
 			try {
+				log(`Attempt ${attempts}/${maxAttempts} to delete comment ${commentId}`);
 				btn.click();
 				await sleep(300);
 
@@ -323,8 +359,40 @@
 				}
 
 				yes.click();
-				await sleep(rand(SHORT_DELAY_MIN, SHORT_DELAY_MAX));
-				return true;
+				
+				// Wait longer to see if deletion succeeds and comment disappears
+				await sleep(rand(SHORT_DELAY_MIN, SHORT_DELAY_MAX) * 2);
+				
+				// Check if the comment element still exists
+				if (commentElement && document.contains(commentElement)) {
+					log(`Comment ${commentId} still exists after deletion attempt, might be rate limited`);
+					
+					// Check if we're rate limited (the monkey patch should have set this)
+					if (rateLimitActive) {
+						log("Rate limit detected during deletion, waiting before retry");
+						await waitForRateLimit();
+					} else {
+						// If not rate limited but comment still exists, wait a bit longer
+						await sleep(5000);
+					}
+					
+					// Try to find the button again (DOM might have changed)
+					const newBtn = getDeleteButtons().find(b => {
+						const newCommentElement = b.closest('.comment, .thing, .entry, [id^=t1_]');
+						return newCommentElement && newCommentElement.id === commentId;
+					});
+					
+					if (newBtn) {
+						btn = newBtn; // Update button reference
+						continue; // Try again
+					} else {
+						// Button not found, comment might have been deleted
+						success = true;
+					}
+				} else {
+					// Comment element no longer exists - success!
+					success = true;
+				}
 
 			} catch (err) {
 				log("Error during delete:", err);
@@ -334,7 +402,14 @@
 				await sleep(cooldown);
 			}
 		}
-		return false;
+		
+		if (success) {
+			log(`Successfully deleted comment ${commentId} after ${attempts} attempt(s)`);
+		} else if (attempts >= maxAttempts) {
+			log(`Failed to delete comment ${commentId} after ${maxAttempts} attempts, skipping`);
+		}
+		
+		return success;
 	}
 
 
@@ -400,6 +475,11 @@
 				deleted++;
 				// Update status with number of deleted comments
 				statusDisplay.updateField('commentsDeleted', deleted);
+			}
+
+			// Minimum delay between delete attempts to avoid hitting rate limits
+			if (running && deleted < deletes.length) {
+				await sleep(MIN_DELAY_BETWEEN_DELETES);
 			}
 
 			// periodic long pause to avoid rate limit
