@@ -34,9 +34,8 @@
 	const WAIT_FOR_COMMENTS_MS = 8000;
 	const RATE_LIMIT_MIN = 60000;
 	const RATE_LIMIT_MAX = 1800000;
-	const SHORT_DELAY_MIN = 3000;
-	const SHORT_DELAY_MAX = 5000;
-	const MIN_DELAY_BETWEEN_DELETES = 2000; // Minimum 2 seconds between delete attempts
+	const SHORT_DELAY_MIN = 1000;
+	const SHORT_DELAY_MAX = 1000;
 	const LONG_DELAY_AFTER = [10, 20];
 	const LONG_DELAY_MS = [10000, 15000];
 	const DAYS_TO_PRESERVE = 10; // Keep comments from the last N days
@@ -427,11 +426,6 @@
 				deleted++;
 				// Update status with number of deleted comments
 				statusDisplay.updateField('commentsDeleted', deleted);
-			}
-
-			// Minimum delay between delete attempts to avoid hitting rate limits
-			if (running && deleted < deletes.length) {
-				await sleep(MIN_DELAY_BETWEEN_DELETES);
 			}
 
 			// periodic long pause to avoid rate limit
