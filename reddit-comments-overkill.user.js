@@ -332,21 +332,12 @@
 	 ************************/
 	async function deleteComment(btn) {
 		let success = false;
-		let attempts = 0;
-		const maxAttempts = 3;
 
-		// Find the comment element before attempting deletion
-		const commentElement = btn.closest('.comment, .thing, .entry, [id^=t1_]');
-		const commentId = commentElement ? commentElement.id || 'unknown' : 'unknown';
-
-		while (!success && running && attempts < maxAttempts) {
-			attempts++;
-			
+		while (!success && running) {
 			// Wait if we're currently rate limited
 			await waitForRateLimit();
 
 			try {
-				log(`Attempt ${attempts}/${maxAttempts} to delete comment ${commentId}`);
 				btn.click();
 				await sleep(300);
 
@@ -359,40 +350,8 @@
 				}
 
 				yes.click();
-				
-				// Wait longer to see if deletion succeeds and comment disappears
-				await sleep(rand(SHORT_DELAY_MIN, SHORT_DELAY_MAX) * 2);
-				
-				// Check if the comment element still exists
-				if (commentElement && document.contains(commentElement)) {
-					log(`Comment ${commentId} still exists after deletion attempt, might be rate limited`);
-					
-					// Check if we're rate limited (the monkey patch should have set this)
-					if (rateLimitActive) {
-						log("Rate limit detected during deletion, waiting before retry");
-						await waitForRateLimit();
-					} else {
-						// If not rate limited but comment still exists, wait a bit longer
-						await sleep(5000);
-					}
-					
-					// Try to find the button again (DOM might have changed)
-					const newBtn = getDeleteButtons().find(b => {
-						const newCommentElement = b.closest('.comment, .thing, .entry, [id^=t1_]');
-						return newCommentElement && newCommentElement.id === commentId;
-					});
-					
-					if (newBtn) {
-						btn = newBtn; // Update button reference
-						continue; // Try again
-					} else {
-						// Button not found, comment might have been deleted
-						success = true;
-					}
-				} else {
-					// Comment element no longer exists - success!
-					success = true;
-				}
+				await sleep(rand(SHORT_DELAY_MIN, SHORT_DELAY_MAX));
+				return true;
 
 			} catch (err) {
 				log("Error during delete:", err);
@@ -402,14 +361,7 @@
 				await sleep(cooldown);
 			}
 		}
-		
-		if (success) {
-			log(`Successfully deleted comment ${commentId} after ${attempts} attempt(s)`);
-		} else if (attempts >= maxAttempts) {
-			log(`Failed to delete comment ${commentId} after ${maxAttempts} attempts, skipping`);
-		}
-		
-		return success;
+		return false;
 	}
 
 
