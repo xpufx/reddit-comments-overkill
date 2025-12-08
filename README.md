@@ -1,28 +1,34 @@
 # Reddit Comment Overkill
 
-A browser userscript that automatically deletes all your Reddit comments across multiple sort types while conservatively adhering to Reddit's rate limits.
+A browser userscript that automatically deletes all your Reddit comments. It's designed to be safe, reliable, and respect Reddit's rate limits while ensuring complete coverage of your comment history.
 
-## **WARNING** 
-**AI coding using LLM Agents**
+## ⚠️ Important Warnings
 
-## What It Does
+**Before using this script:**
+- This will **permanently delete** your Reddit comments
+- Comments from the last 10 days are preserved by default (configurable)
+- Use at your own risk - always backup important comments
+- The script includes safety features but cannot guarantee against account issues
 
-- **Bulk comment deletion** - Automatically deletes all your Reddit comments
-- **Smart sort cycling** - Cycles through `new → hot → top → controversial` to ensure complete coverage
-- **Sort selection** - Choose which sort types to process via modal dialog
-- **State persistence** - Automatically resumes from last position using URL parameters
-- **Rate limit handling** - Detects 429 responses and implements exponential backoff
-- **Recent comment protection** - Preserves comments from the last 10 days (configurable)
-- **Cross-platform compatibility** - Works on both old.reddit.com and www.reddit.com
-- **Real-time status display** - Shows progress, rate limit status, and recent activity
+## What This Script Does
 
-## What Makes It Unique
+This script helps you clean up your Reddit comment history by automatically finding and deleting your old comments. Here's how it works:
 
-- **Intelligent rate limiting** - Exponential backoff with configurable multipliers
-- **Date-based filtering** - Protects recent comments while deleting older ones
-- **Comprehensive logging** - Real-time status display with newest messages first
-- **Robust DOM detection** - Works with both infinite scroll and pagination
-- **Error recovery** - Handles network errors and missing elements gracefully
+1. **Finds all your comments** - Searches through different sort views (new, hot, top, controversial) to ensure nothing is missed
+2. **Deletes comments safely** - Each deletion requires confirmation, just like manual deletion
+3. **Preserves recent comments** - Keeps comments from the last 10 days (you can change this)
+4. **Handles rate limits** - Automatically detects when Reddit is limiting requests and waits appropriately
+5. **Survives page reloads** - If you close the page or browser, it resumes where it left off
+6. **Provides clear feedback** - Shows progress in browser console and has a visual button indicator
+
+## Key Features
+
+- **Complete coverage** - Cycles through all 4 sort types to find every comment
+- **Safe timing** - 1-second delay between deletions to avoid rate limits
+- **Date protection** - Never deletes comments newer than your configured threshold
+- **Reliable recovery** - Automatically resumes after page reloads or crashes
+- **Simple interface** - One button to start/stop, with visual feedback
+- **Cross-platform** - Works on both old.reddit.com and new Reddit
 
 ## Installation
 
@@ -42,28 +48,31 @@ A browser userscript that automatically deletes all your Reddit comments across 
 
 2. Click the **"Start Deleting"** button in the bottom-right corner
 
-3. A modal will appear to select which sort types to process (default: all)
+3. A confirmation modal will appear warning about bulk deletion
 4. The script will:
-   - Begin deleting comments starting from the current page's sort (if selected) or first selected sort
-   - Show real-time progress in the status display
-   - Automatically cycle through selected sort types
+   - Begin deleting comments starting from the current page's sort
+   - Process all 4 sort types automatically (new → hot → top → controversial)
+   - Show progress in browser console
    - Handle rate limits and pagination automatically
+   - Preserve comments from the last 10 days
 
-4. To stop the process, click **"Stop Deleting"**
+5. To stop the process, click **"Stop Deleting"** (button turns red when running)
 
 ## Features
 
-- **Sort Selection Modal** - Choose which sort types (`new`, `hot`, `top`, `controversial`) to process
-- **URL State Persistence** - Automatically resumes from last position if page reloads
-- **Current Sort Detection** - Starts from current page's sort when possible
-- **Selective Processing** - Skip sorts you've already completed
+- **Automatic Sort Cycling** - Processes all 4 sort types (`new`, `hot`, `top`, `controversial`) automatically
+- **URL State Persistence** - Single `comment_overkill_sort` parameter tracks progress across page reloads
+- **Current Sort Detection** - Starts from current page's sort and cycles through remaining sorts
+- **Dual Rate Limit Detection** - Monitors both fetch and XMLHttpRequest for 429 responses
+- **Visual Button Feedback** - Button shows "Reddit Comment Overkill" branding with color changes (orange→red) and pulsing animation when running
+- **Console Logging** - Detailed console output for monitoring without cluttered UI
 
 ## Configuration
 
 Edit the following parameters in the script to customize behavior:
 
 ```javascript
-// Sort types to cycle through
+// Sort types to cycle through (processes all 4 automatically)
 const SORTS = ["new", "hot", "top", "controversial"];
 
 // How long to wait for comments to load (milliseconds)
@@ -74,64 +83,69 @@ const RATE_LIMIT_MIN = 60000;      // 1 minute minimum wait
 const RATE_LIMIT_MAX = 1800000;    // 30 minutes maximum wait
 const BASE_RATE_LIMIT_WAIT = 60000; // Base wait time for rate limits
 
-// Delays between deletions
-const SHORT_DELAY_MIN = 2000;      // 2 seconds
-const SHORT_DELAY_MAX = 2000;      // 2 seconds
+// Delay between deletion attempts (1 second)
+const SHORT_DELAY_MIN = 1000;      // 1 second
+const SHORT_DELAY_MAX = 1000;      // 1 second
 
 // Long pause configuration (prevents rate limiting)
-const LONG_DELAY_AFTER = [3, 6];    // Pause after 3-6 deletions
-const LONG_DELAY_MS = [15000, 30000]; // Pause for 15-30 seconds
+const LONG_DELAY_AFTER = [10, 20];    // Pause after 10-20 deletions
+const LONG_DELAY_MS = [10000, 15000]; // Pause for 10-15 seconds
 
 // Date filtering - preserve recent comments
 const DAYS_TO_PRESERVE = 10;        // Keep comments from last 10 days
 ```
 
-## Status Display
+## Monitoring Progress
 
-The script provides a real-time status display showing:
+The script provides detailed console logging for monitoring:
 
-- **Status** - Current operation state
-- **Current Sort** - Which sort type is being processed
-- **Comments Found** - Number of deletable comments on current page
-- **Comments Deleted** - Total comments deleted in current session
-- **Recent Preserved** - Comments skipped due to date filtering
-- **Rate Limit Status** - Current rate limiting state
-- **Sort Progress** - Progress through selected sort types (e.g., "2/4")
-- **Selected Sorts** - Which sort types are being processed
-- **Log Messages** - Recent activity (newest messages first)
+- **Console Output** - All activity logged to browser console with `[Reddit Comment Overkill]` prefix
+- **Button Visual Feedback** - Button changes from orange to red with pulsing animation when running
+- **Rate Limit Detection** - Logs when 429 responses are detected via fetch or XMLHttpRequest
+- **Sort Progress** - Logs when switching between sort types (new → hot → top → controversial)
+- **Deletion Counts** - Logs number of comments found and deleted
+- **Date Filtering** - Logs when comments are preserved due to being recent
+
+Open browser developer tools (F12) and check the Console tab to monitor script activity.
 
 ## Rate Limiting
 
 The script automatically handles Reddit's rate limiting:
 
-- Detects 429 HTTP responses
-- Implements exponential backoff (doubles wait time each rate limit)
-- Waits between 1-30 minutes depending on rate limit frequency
-- Continues automatically when rate limit period ends
+- **Dual Detection** - Monitors both fetch and XMLHttpRequest for 429 responses
+- **Exponential Backoff** - Doubles wait time each rate limit (60s → 120s → 240s, up to 30min max)
+- **Automatic Resumption** - Continues automatically when rate limit period ends
+- **Multiplier Reset** - Resets backoff multiplier after successful responses
+- **Wait Checks** - Checks every 5 seconds if rate limit period has ended
 
 ## Safety Features
 
-- **Date protection** - Never deletes comments newer than configured threshold
-- **Confirmation required** - Each deletion requires explicit "yes" confirmation
-- **Error recovery** - Retries failed deletions with exponential backoff
-- **Manual control** - Start/stop button for immediate control
+- **Date Protection** - Never deletes comments newer than configured threshold (last 10 days)
+- **Confirmation Required** - Each deletion requires explicit "yes" confirmation
+- **Initial Warning Modal** - Shows confirmation dialog before starting bulk deletion
+- **Error Recovery** - Retries failed deletions with exponential backoff (5-30 seconds)
+- **Manual Control** - Start/stop button for immediate control with visual feedback
+- **URL State Tracking** - Can resume from interruption using URL parameter
 
 ## Troubleshooting
 
 ### Script not starting
-- Ensure you're on your user comments page
-- Check that the userscript manager is enabled
-- Verify the script matches the URL patterns in the header
+- Ensure you're on your user comments page (URL should contain `/user/yourusername/comments/`)
+- Check that Tampermonkey/Greasemonkey is enabled and the script is active
+- Look for the "Reddit Comment Overkill" button in the bottom-right corner
+- Open browser console (F12) to see if script is loading
 
 ### Comments not being deleted
-- Check if comments are older than the `DAYS_TO_PRESERVE` threshold
+- Check if comments are newer than 10 days (they're preserved by default)
 - Verify you own the comments (can't delete others' comments)
-- Check the status display for rate limiting messages
+- Open browser console (F12) to see script activity and error messages
+- Check if rate limiting is active (script will wait automatically)
 
 ### Rate limiting issues
-- The script will automatically wait and retry
-- Consider increasing `SHORT_DELAY_*` values for more conservative timing
-- Rate limit multiplier increases with each 429 response
+- The script automatically detects 429 responses and waits (60s → 120s → 240s, up to 30min)
+- Check console for "RATE LIMIT detected" messages
+- Script will resume automatically when rate limit period ends
+- Consider increasing `SHORT_DELAY_MIN/MAX` for more conservative timing
 
 ### Contributing
 1. Not at this time
