@@ -44,10 +44,6 @@
 	function log(message, ...args) {
 		const logMessage = "[" + SCRIPT_NAME + "] " + message;
 		console.log(logMessage, ...args);
-		// Also update status display with log message if it's initialized
-		if (typeof statusDisplay !== 'undefined' && statusDisplay && typeof statusDisplay.addLogMessage === 'function') {
-			statusDisplay.addLogMessage(logMessage + (args.length > 0 ? " " + args.join(" ") : ""));
-		}
 	}
 
 	// Use URL parameter to maintain state across page reloads
@@ -120,12 +116,8 @@
 	async function waitForRateLimit() {
 		while (isRateLimited()) {
 			log("Still rate limited, waiting...");
-			// Update status to show rate limit state
-			statusDisplay.updateField('rateLimit', 'Active - waiting...');
 			await sleep(5000); // Check every 5 seconds
 		}
-		// Clear rate limit status when no longer rate limited
-		statusDisplay.updateField('rateLimit', '');
 	}
 
 	/***********************
@@ -273,8 +265,6 @@
 
 			if (shouldSkip) {
 				preservedCount++;
-				// Update status display
-				statusDisplay.updateField('recentPreserved', preservedCount);
 			}
 
 			return shouldSkip;
@@ -390,7 +380,6 @@
 			// Comments exist but no delete buttons (might be someone else's comments)
 			log("Comments found but no delete buttons available");
 			// Update status to show current state
-			statusDisplay.updateField('commentsFound', '0 (waiting)');
 			// Check for next page or load more even if no deletes found
 			const nextBtn = document.querySelector("span.next-button a");
 			if (nextBtn && running) {
@@ -411,7 +400,6 @@
 
 		log("Found", deletes.length, "comments to delete");
 		// Update status with number of comments found
-		statusDisplay.updateField('commentsFound', deletes.length);
 
 		let deleted = 0;
 
@@ -425,7 +413,6 @@
 			if (success) {
 				deleted++;
 				// Update status with number of deleted comments
-				statusDisplay.updateField('commentsDeleted', deleted);
 			}
 
 			// periodic long pause to avoid rate limit
@@ -566,9 +553,6 @@
 		log("Active sorts:", activeSorts);
 
 		// Update status display
-		statusDisplay.updateField('status', 'Running');
-		statusDisplay.updateField('currentSort', activeSorts[idx] || 'unknown');
-		statusDisplay.updateField('sortProgress', (idx + 1) + '/' + activeSorts.length);
 
 		// Track which sorts have been completed to skip them if we encounter them again
 		const completedSorts = new Set();
@@ -595,7 +579,6 @@
 					log("ALL SELECTED SORTS PROCESSED — no more comments.");
 					running = false;
 					// Update status and button state when all sorts are complete
-					statusDisplay.updateField('status', 'Complete - All sorts processed');
 					updateUrlState(false, 0);
 					btn.textContent = "Start Deleting";
 					log("All selected sorts completed, clearing state");
@@ -605,7 +588,6 @@
 				const sort = activeSorts[idx];
 
 				log("Processing sort: " + sort + " at index: " + idx);
-				statusDisplay.updateField('currentSort', sort);
 				const finished = await runSort(sort);
 				if (!running) break;
 
@@ -622,14 +604,12 @@
 					updateUrlState(running, nextSort);
 					log("Updated URL state - running: " + running + ", next sort: " + nextSort);
 					// Update progress in status display
-					statusDisplay.updateField('sortProgress', (idx + 1) + '/' + activeSorts.length);
 				}
 
 				if (idx >= activeSorts.length) {
 					log("ALL SELECTED SORTS PROCESSED — no more comments.");
 					running = false;
 					// Update status and button state when all sorts are complete
-					statusDisplay.updateField('status', 'Complete - All sorts processed');
 					updateUrlState(false, 0);
 					btn.textContent = "Start Deleting";
 					log("All selected sorts completed, clearing state");
@@ -640,130 +620,17 @@
 			} catch (error) {
 				log("Error in main loop:", error);
 				// Update status to show error
-				statusDisplay.updateField('status', 'Error occurred - pausing');
 				// Wait before continuing to avoid getting stuck in an error loop
 				await sleep(10000);
 				// Resume status after error pause
 				if (running) {
-					statusDisplay.updateField('status', 'Running');
 				}
 			}
 		}
 	}
 
 
-	/***********************
-	 * STATUS DISPLAY
-	 ************************/
-	const statusDisplay = {
-		container: null,
-		fields: {},
-		logMessages: [],
-		maxLogMessages: 10, // Keep only the last 10 log messages
-
-		init() {
-			// Create status container below the main button
-			this.container = document.createElement("div");
-			this.container.id = "reddit-overkill-status";
-			this.container.style.cssText = `
-				position: fixed;
-				bottom: 60px;
-				right: 15px;
-				background: rgba(0, 0, 0, 0.85);
-				color: white;
-				padding: 10px 15px;
-				border-radius: 6px;
-				font-family: Arial, sans-serif;
-				font-size: 12px;
-				z-index: 999998;
-				min-width: 200px;
-				max-width: 300px;
-				max-height: 150px;
-				overflow-y: auto;
-				box-shadow: 0 2px 10px rgba(0,0,0,0.3);
-			`;
-
-			// Initially hide the status container
-			this.container.style.display = "none";
-			document.body.appendChild(this.container);
-		},
-
-		registerField(key, label, value = "") {
-			this.fields[key] = { label, value };
-		},
-
-		updateField(key, value) {
-			if (this.fields[key]) {
-				this.fields[key].value = value;
-				this.render();
-			}
-		},
-
-		addLogMessage(message) {
-			// Add new message to log at the top
-			const timestamp = new Date().toLocaleTimeString();
-			this.logMessages.unshift(`[${timestamp}] ${message}`);
-
-			// Keep only the most recent messages (newest first)
-			if (this.logMessages.length > this.maxLogMessages) {
-				this.logMessages = this.logMessages.slice(0, this.maxLogMessages);
-			}
-
-			// Update the display
-			this.render();
-		},
-
-		render() {
-			if (!this.container) return;
-
-			const statusLines = [];
-			// Add field-based status information first
-			for (const [key, field] of Object.entries(this.fields)) {
-				if (field.value !== "" && field.value !== null && field.value !== undefined) {
-					statusLines.push(`${field.label}: ${field.value}`);
-				}
-			}
-
-			// Add a separator if both fields and log messages exist
-			if (statusLines.length > 0 && this.logMessages.length > 0) {
-				statusLines.push("---");
-			}
-
-			// Add log messages
-			statusLines.push(...this.logMessages);
-
-			if (statusLines.length > 0) {
-				this.container.innerHTML = statusLines.join("<br>");
-				this.container.style.display = "block";
-			} else {
-				this.container.style.display = "none";
-			}
-		},
-
-		show() {
-			if (this.container) {
-				this.container.style.display = "block";
-			}
-		},
-
-		hide() {
-			if (this.container) {
-				this.container.style.display = "none";
-			}
-		}
-	};
-
-	// Initialize status display
-	statusDisplay.init();
-
-	// Register initial status fields
-	statusDisplay.registerField('status', 'Status');
-	statusDisplay.registerField('currentSort', 'Current Sort');
-	statusDisplay.registerField('commentsFound', 'Comments Found');
-	statusDisplay.registerField('commentsDeleted', 'Comments Deleted');
-	statusDisplay.registerField('recentPreserved', 'Recent Preserved');
-	statusDisplay.registerField('rateLimit', 'Rate Limit Status');
-	statusDisplay.registerField('sortProgress', 'Sort Progress');
+	
 
 	
 		
@@ -854,8 +721,7 @@
 		confirmBtn.onclick = () => {
 			document.body.removeChild(modal);
 			running = true;
-			btn.textContent = "Stop Deleting";
-			statusDisplay.updateField('status', 'Running');
+			updateButtonState();
 			
 			// Calculate starting sort and update URL
 			const currentSort = getCurrentSort();
@@ -869,7 +735,7 @@
 	 * BUTTON
 	 ************************/
 	const btn = document.createElement("button");
-	btn.textContent = "Start Deleting";
+	btn.innerHTML = '<span style="font-weight: bold; font-size: 11px; opacity: 0.8; margin-right: 6px;">Reddit Comment Overkill</span><span class="btn-text">Start Deleting</span>';
 	Object.assign(btn.style, {
 		position: "fixed",
 		bottom: "15px",
@@ -881,12 +747,46 @@
 		borderRadius: "6px",
 		fontSize: "14px",
 		cursor: "pointer",
-		zIndex: 999999
+		zIndex: 999999,
+		display: "flex",
+		alignItems: "center",
+		justifyContent: "center",
+		boxShadow: "0 2px 8px rgba(0,0,0,0.3)",
+		transition: "all 0.2s ease"
 	});
 	document.body.appendChild(btn);
 
+	// Update button visual state
+	function updateButtonState() {
+		const btnText = btn.querySelector('.btn-text');
+		if (running) {
+			btnText.textContent = "Stop Deleting";
+			btn.style.background = "#d00";
+			btn.style.boxShadow = "0 2px 8px rgba(208, 0, 0, 0.5)";
+			// Add pulsing animation when running
+			btn.style.animation = "pulse 1.5s infinite";
+		} else {
+			btnText.textContent = "Start Deleting";
+			btn.style.background = "#ff4500";
+			btn.style.boxShadow = "0 2px 8px rgba(0,0,0,0.3)";
+			btn.style.animation = "none";
+		}
+	}
+
+	// Add CSS for pulsing animation
+	const style = document.createElement('style');
+	style.textContent = `
+		@keyframes pulse {
+			0% { box-shadow: 0 0 0 0 rgba(208, 0, 0, 0.7); }
+			70% { box-shadow: 0 0 0 6px rgba(208, 0, 0, 0); }
+			100% { box-shadow: 0 0 0 0 rgba(208, 0, 0, 0); }
+		}
+	`;
+	document.head.appendChild(style);
+
 	// Set initial button state based on URL running state
-	btn.textContent = getRunningStateFromUrl() ? "Stop Deleting" : "Start Deleting";
+	running = getRunningStateFromUrl();
+	updateButtonState();
 
 	btn.onclick = () => {
 		if (!running) {
@@ -894,8 +794,7 @@
 			if (getRunningStateFromUrl()) {
 				// Already has comment_overkill_sort parameter - resume without confirmation
 				running = true;
-				btn.textContent = "Stop Deleting";
-				statusDisplay.updateField('status', 'Running');
+				updateButtonState();
 				main();
 			} else {
 				// Fresh start - show confirmation modal
@@ -904,9 +803,8 @@
 		} else {
 			// Stopping
 			running = false;
-			statusDisplay.updateField('status', 'Stopped');
 			updateUrlState(false, 0);
-			btn.textContent = "Start Deleting";
+			updateButtonState();
 		}
 	};
 
@@ -920,7 +818,7 @@
 		log("Resuming from previous state");
 		running = true; // Ensure running is true when resuming
 		// Update button to reflect running status
-		btn.textContent = "Stop Deleting";
+		updateButtonState();
 
 		main();
 	}
