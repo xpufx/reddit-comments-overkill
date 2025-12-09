@@ -22,7 +22,7 @@
  3. It WAITS for comments to appear (up to 8 seconds) before declaring a sort empty.
  4. Deletions use DOM-based detection ("delete" text in buttons/links).
  5. Rate-limit (429) detected by monkey-patching fetch → script waits & retries.
- 6. Next-page handled on old Reddit. Infinite scroll handled on new Reddit.
+ 6. Next-page handled on old Reddit. Infinite scroll handled if enabled.
  7. Script loops forever until all sorts are empty.
  8. Manual Start/Stop button provided.
 */
@@ -476,7 +476,7 @@
 			return true;
 		}
 
-		// handle new reddit infinite scroll
+		// handle infinite scroll
 		const more = document.querySelector(".morecomments, .load-more-comments");
 		if (more && running) {
 			log("Loading more comments...");
