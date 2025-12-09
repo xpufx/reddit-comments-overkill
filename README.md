@@ -2,14 +2,22 @@
 
 A browser userscript that automatically deletes all your Reddit comments. It's designed to be reliable and respect Reddit's rate limits while ensuring complete coverage of your comment history.
 
-## Features and Warnings
+## ⚠️ Important Warnings
 
-- **Permanent Deletion**: This will **permanently delete** your Reddit comments. Use at your own risk.
-- **Date Protection**: By default, comments from the last 10 days are preserved. This is configurable. Set `daysToPreserve` to 0 to delete all comments regardless of age.
+- **Permanent Deletion**: This will **permanently delete** your Reddit comments. Use at your own risk. Always back up important comments before running this script.
+
+## Features
+
 - **Complete Coverage**: Cycles through all 4 sort types (`new`, `hot`, `top`, `controversial`) to find every comment.
 - **Automated Deletion**: The script automates the entire deletion process, including clicking the final "yes" confirmation.
-- **Rate Limit Handling**: Automatically detects rate limits and waits appropriately before retrying.
-- **Simple Interface**: A single button to start and stop the process, with clear visual feedback. The button is orange-red and turns a darker red when running.
+- **Date Protection**: By default, comments from the last 10 days are preserved. This is configurable in the script.
+- **Rate Limit Handling**:
+    - Automatically detects rate limits (429 errors) from both `fetch` and `XMLHttpRequest`.
+    - Implements exponential backoff, doubling the wait time after each rate limit detection (e.g., 60s, 120s, 240s) up to a maximum of 30 minutes.
+    - Resets the backoff multiplier after a successful request.
+- **Simple Interface**: A single button to start and stop the process. The button is orange-red and turns a darker red with a pulsing animation when running.
+- **Detailed Logging**: All actions, including deletions, sort changes, and rate limit warnings, are logged to the browser's developer console (F12).
+- **Resumes from Interruptions**: The script uses URL parameters to track its state, allowing it to be stopped and resumed.
 
 ## Installation
 
@@ -82,29 +90,6 @@ const LONG_DELAY_MS = [10000, 15000]; // Pause for 10-15 seconds
 // Date filtering - preserve recent comments
 const DAYS_TO_PRESERVE = 10;        // Keep comments from last 10 days (set to 0 to delete all comments regardless of age)
 ```
-
-## Monitoring Progress
-
-The script provides detailed console logging for monitoring:
-
-- **Console Output** - All activity logged to browser console with `[Reddit Comment Overkill]` prefix
-- **Button Visual Feedback** - Button changes from orange to red with pulsing animation when running
-- **Rate Limit Detection** - Logs when 429 responses are detected via fetch or XMLHttpRequest
-- **Sort Progress** - Logs when switching between sort types (new → hot → top → controversial)
-- **Deletion Counts** - Logs number of comments found and deleted
-- **Date Filtering** - Logs when comments are preserved due to being recent
-
-Open browser developer tools (F12) and check the Console tab to monitor script activity.
-
-## Rate Limiting
-
-The script automatically handles Reddit's rate limiting:
-
-- **Dual Detection** - Monitors both fetch and XMLHttpRequest for 429 responses
-- **Exponential Backoff** - Doubles wait time each rate limit (60s → 120s → 240s, up to 30min max)
-- **Automatic Resumption** - Continues automatically when rate limit period ends
-- **Multiplier Reset** - Resets backoff multiplier after successful responses
-- **Wait Checks** - Checks every 5 seconds if rate limit period has ended
 
 ## Troubleshooting
 
