@@ -1,32 +1,16 @@
 # Reddit Comment Overkill
 
-A browser userscript that automatically deletes all your Reddit comments. It's designed to be safe, reliable, and respect Reddit's rate limits while ensuring complete coverage of your comment history.
+A browser userscript that automatically deletes all your Reddit comments. It's designed to be reliable and respect Reddit's rate limits while ensuring complete coverage of your comment history.
 
-## ⚠️ Important Warnings
+## Features and Warnings
 
-**Before using this script:**
-- This will **permanently delete** your Reddit comments
-- Comments from the last 10 days are preserved by default (configurable)
-- Set `DAYS_TO_PRESERVE` to 0 to delete all comments regardless of age
-- Use at your own risk - always backup important comments
-- The script includes safety features but cannot guarantee against account issues
+- **Permanent Deletion**: This will **permanently delete** your Reddit comments. Use at your own risk.
+- **Date Protection**: By default, comments from the last 10 days are preserved. This is configurable. Set `daysToPreserve` to 0 to delete all comments regardless of age.
+- **Complete Coverage**: Cycles through all 4 sort types (`new`, `hot`, `top`, `controversial`) to find every comment.
+- **Automated Deletion**: The script automates the entire deletion process, including clicking the final "yes" confirmation.
+- **Rate Limit Handling**: Automatically detects rate limits and waits appropriately before retrying.
+- **Simple Interface**: A single button to start and stop the process, with clear visual feedback.
 
-## What This Script Does
-
-This script helps you clean up your Reddit comment history by automatically finding and deleting your old comments. Here's how it works:
-
-1. **Finds all your comments** - Searches through different sort views (new, hot, top, controversial) to ensure nothing is missed
-2. **Deletes comments safely** - Each deletion requires confirmation, just like manual deletion
-3. **Preserves recent comments** - Keeps comments from the last 10 days (you can change this)
-4. **Handles rate limits** - Automatically detects when Reddit is limiting requests and waits appropriately
-
-## Key Features
-
-- **Complete coverage** - Cycles through all 4 sort types to find every comment
-- **Safe timing** - 1-second delay between deletions to avoid rate limits
-- **Date protection** - Never deletes comments newer than your configured threshold
-- **Simple interface** - One button to start/stop, with visual feedback
-  
 ## Installation
 
 ### Step-by-Step Guide
