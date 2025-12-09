@@ -9,7 +9,7 @@ A browser userscript that automatically deletes all your Reddit comments. It's d
 - **Complete Coverage**: Cycles through all 4 sort types (`new`, `hot`, `top`, `controversial`) to find every comment.
 - **Automated Deletion**: The script automates the entire deletion process, including clicking the final "yes" confirmation.
 - **Rate Limit Handling**: Automatically detects rate limits and waits appropriately before retrying.
-- **Simple Interface**: A single button to start and stop the process, with clear visual feedback.
+- **Simple Interface**: A single button to start and stop the process, with clear visual feedback. The button is orange-red and turns a darker red when running.
 
 ## Installation
 
@@ -54,13 +54,6 @@ A browser userscript that automatically deletes all your Reddit comments. It's d
    - Preserve comments from the last 10 days
 
 5. To stop the process, click **"Stop Deleting"** (button turns red when running)
-
-## Features
-
-- **Automatic Sort Cycling** - Processes all 4 sort types (`new`, `hot`, `top`, `controversial`) automatically
-- **Dual Rate Limit Detection** - Monitors both fetch and XMLHttpRequest for 429 responses
-- **Visual Button Feedback** - Button shows "Reddit Comment Overkill" branding with color changes (orange→red) and pulsing animation when running
-- **Console Logging** - Detailed console output for monitoring without cluttered UI
 
 ## Configuration
 
@@ -112,15 +105,6 @@ The script automatically handles Reddit's rate limiting:
 - **Automatic Resumption** - Continues automatically when rate limit period ends
 - **Multiplier Reset** - Resets backoff multiplier after successful responses
 - **Wait Checks** - Checks every 5 seconds if rate limit period has ended
-
-## Safety Features
-
-- **Date Protection** - Never deletes comments newer than configured threshold (last 10 days)
-- **Confirmation Required** - Each deletion requires explicit "yes" confirmation
-- **Initial Warning Modal** - Shows confirmation dialog before starting bulk deletion
-- **Error Recovery** - Retries failed deletions with exponential backoff (5-30 seconds)
-- **Manual Control** - Start/stop button for immediate control with visual feedback
-- **URL State Tracking** - Can resume from interruption using URL parameter
 
 ## Troubleshooting
 
