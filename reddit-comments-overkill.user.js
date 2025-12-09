@@ -34,7 +34,7 @@
 	 * CONFIG
 	 ************************/
 	const SCRIPT_NAME = "Reddit Comment Overkill";
-	const LOGGING_ENABLED = true; // 设置为false禁用控制台日志
+	const LOGGING_ENABLED = true; // Set to false to disable console logging
 	const SORTS = ["new", "hot", "top", "controversial"];
 	const WAIT_FOR_COMMENTS_MS = 8000;
 	const RATE_LIMIT_MIN = 60000;
