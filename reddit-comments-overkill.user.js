@@ -54,20 +54,20 @@
 	}
 
 	// Use URL parameter to maintain state across page reloads
-	// comment_overkill_sort presence indicates script is running
+	// rco_sort presence indicates script is running
 	function getRunningStateFromUrl() {
 		const urlParams = new URLSearchParams(window.location.search);
-		return urlParams.get('comment_overkill_sort') !== null;
+		return urlParams.get('rco_sort') !== null;
 	}
 
 	function getSortFromUrl() {
 		const urlParams = new URLSearchParams(window.location.search);
-		return urlParams.get('comment_overkill_sort');
+		return urlParams.get('rco_sort');
 	}
 
 	function getDaysFromUrl() {
 		const urlParams = new URLSearchParams(window.location.search);
-		const daysParam = urlParams.get('comment_overkill_days');
+		const daysParam = urlParams.get('rco_days');
 		if (daysParam !== null) {
 			const days = parseInt(daysParam, 10);
 			return !isNaN(days) && days >= 0 ? days : 10; // default 10 if invalid
@@ -79,16 +79,16 @@
 		const urlParams = new URLSearchParams(window.location.search);
 
 		if (isRunning && sortName) {
-			// Set comment_overkill_sort parameter
-			urlParams.set('comment_overkill_sort', sortName);
-			// Set comment_overkill_days parameter if provided
+			// Set rco_sort parameter
+			urlParams.set('rco_sort', sortName);
+			// Set rco_days parameter if provided
 			if (daysToPreserve !== undefined) {
-				urlParams.set('comment_overkill_days', daysToPreserve.toString());
+				urlParams.set('rco_days', daysToPreserve.toString());
 			}
 		} else {
 			// Remove parameters when not running
-			urlParams.delete('comment_overkill_sort');
-			urlParams.delete('comment_overkill_days');
+			urlParams.delete('rco_sort');
+			urlParams.delete('rco_days');
 		}
 
 		// Update URL without reloading
@@ -251,7 +251,7 @@
 			const currentSort = getSortFromUrl();
 			log("Preserving sort parameter:", currentSort);
 			if (currentSort) {
-				u.searchParams.set("comment_overkill_sort", currentSort);
+				u.searchParams.set("rco_sort", currentSort);
 			}
 		}
 
@@ -863,7 +863,7 @@
 		if (!running) {
 			// Starting fresh - check if we need confirmation
 			if (getRunningStateFromUrl()) {
-				// Already has comment_overkill_sort parameter - resume without confirmation
+				// Already has rco_sort parameter - resume without confirmation
 				running = true;
 				updateButtonState();
 				main();
