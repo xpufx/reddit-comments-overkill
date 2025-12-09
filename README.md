@@ -8,15 +8,13 @@ A browser userscript that automatically deletes all your Reddit comments. It's d
 
 ## Features
 
-- **Complete Coverage**: Cycles through all 4 sort types (`new`, `hot`, `top`, `controversial`) to find every comment.
+- **Complete Coverage**: Cycles through all 4 sort types (`new`, `hot`, `top`, `controversial`) to find every comment. However due to the way Reddit caches comments, you may have to run the script again after some hours.
+
 - **Date Protection**: By default, comments from the last 10 days are preserved. This is configurable in the script.
 - **Rate Limit Handling**:
     - Automatically detects rate limits (429 errors) from both `fetch` and `XMLHttpRequest`.
     - Implements exponential backoff, doubling the wait time after each rate limit detection (e.g., 60s, 120s, 240s) up to a maximum of 30 minutes.
-    - Resets the backoff multiplier after a successful request.
-- **Simple Interface**: A single button to start and stop the process. The button is orange-red and turns a darker red with a pulsing animation when running.
 - **Detailed Logging**: All actions, including deletions, sort changes, and rate limit warnings, are logged to the browser's developer console (F12).
-- **State Persistence**: The script uses URL parameters to track its state, allowing it to maintain progress across page reloads (e.g., during pagination or manual refresh).
 
 ## Installation
 
@@ -100,15 +98,8 @@ const DAYS_TO_PRESERVE = 10;        // Keep comments from last 10 days (set to 0
 
 ### Comments not being deleted
 - Check if comments are newer than 10 days (they're preserved by default)
-- Verify you own the comments (can't delete others' comments)
 - Open browser console (F12) to see script activity and error messages
 - Check if rate limiting is active (script will wait automatically)
-
-### Rate limiting issues
-- The script automatically detects 429 responses and waits (60s → 120s → 240s, up to 30min)
-- Check console for "RATE LIMIT detected" messages
-- Script will resume automatically when rate limit period ends
-- Consider increasing `SHORT_DELAY_MIN/MAX` for more conservative timing
 
 ### Contributing
 1. Not at this time
