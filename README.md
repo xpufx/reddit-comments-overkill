@@ -1,4 +1,4 @@
-# Reddit Comment Overkill
+# Reddit Comments Overkill
 
 A browser userscript that automatically deletes all your Reddit comments. It's designed to be reliable and respect Reddit's rate limits while ensuring complete coverage of your comment history.
 
@@ -40,7 +40,7 @@ A browser userscript that automatically deletes all your Reddit comments. It's d
 
 4. **Verify installation**:
    - Go to your Reddit user comments page (see Usage below)
-   - You should see a "Reddit Comment Overkill" button in the bottom-right corner
+   - You should see a "Reddit Comments Overkill" button in the bottom-right corner
 
 ## Usage
 
@@ -93,7 +93,7 @@ const DAYS_TO_PRESERVE = 10;        // Keep comments from last 10 days (set to 0
 ### Script not starting
 - Ensure you're on your user comments page (URL should contain `/user/yourusername/comments/`)
 - Check that Tampermonkey/Greasemonkey is enabled and the script is active
-- Look for the "Reddit Comment Overkill" button in the bottom-right corner
+- Look for the "Reddit Comments Overkill" button in the bottom-right corner
 - Open browser console (F12) to see if script is loading
 
 ### Comments not being deleted
