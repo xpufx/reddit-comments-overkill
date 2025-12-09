@@ -9,7 +9,6 @@ A browser userscript that automatically deletes all your Reddit comments. It's d
 ## Features
 
 - **Complete Coverage**: Cycles through all 4 sort types (`new`, `hot`, `top`, `controversial`) to find every comment.
-- **Automated Deletion**: The script automates the entire deletion process, including clicking the final "yes" confirmation.
 - **Date Protection**: By default, comments from the last 10 days are preserved. This is configurable in the script.
 - **Rate Limit Handling**:
     - Automatically detects rate limits (429 errors) from both `fetch` and `XMLHttpRequest`.
@@ -17,7 +16,7 @@ A browser userscript that automatically deletes all your Reddit comments. It's d
     - Resets the backoff multiplier after a successful request.
 - **Simple Interface**: A single button to start and stop the process. The button is orange-red and turns a darker red with a pulsing animation when running.
 - **Detailed Logging**: All actions, including deletions, sort changes, and rate limit warnings, are logged to the browser's developer console (F12).
-- **Resumes from Interruptions**: The script uses URL parameters to track its state, allowing it to be stopped and resumed.
+- **State Persistence**: The script uses URL parameters to track its state, allowing it to maintain progress across page reloads (e.g., during pagination or manual refresh).
 
 ## Installation
 
