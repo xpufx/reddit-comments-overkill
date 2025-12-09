@@ -3,6 +3,8 @@
 // @namespace    https://example.com/
 // @version      2.21
 // @description  Deletes all comments by cycling sorts reliably, retrying on rate limits, waiting for comments, handling infinite scroll & next page, with Start/Stop control.
+// @downloadURL  https://github.com/xpufx/reddit-comments-overkill/raw/refs/heads/main/reddit-comments-overkill.user.js
+// @updateURL    https://github.com/xpufx/reddit-comments-overkill/raw/refs/heads/main/reddit-comments-overkill.user.js
 // Old Reddit
 // @match        https://old.reddit.com/user/*/comments*
 // STILL Old Reddit but with RES etc that displays all reddit on the normal address
@@ -41,7 +43,7 @@
 	const SHORT_DELAY_MAX = 1000;
 	const LONG_DELAY_AFTER = [10, 20];
 	const LONG_DELAY_MS = [10000, 15000];
-	const DAYS_TO_PRESERVE = 10; // Keep comments from the last N days
+	let daysToPreserve = 10; // Keep comments from the last N days (set to 0 to delete all comments regardless of age)
 
 	// Logging function to consistently identify our script
 	function log(message, ...args) {
@@ -63,15 +65,30 @@
 		return urlParams.get('comment_overkill_sort');
 	}
 
-	function updateUrlState(isRunning, sortName) {
+	function getDaysFromUrl() {
+		const urlParams = new URLSearchParams(window.location.search);
+		const daysParam = urlParams.get('comment_overkill_days');
+		if (daysParam !== null) {
+			const days = parseInt(daysParam, 10);
+			return !isNaN(days) && days >= 0 ? days : 10; // default 10 if invalid
+		}
+		return 10; // default
+	}
+
+	function updateUrlState(isRunning, sortName, daysToPreserve) {
 		const urlParams = new URLSearchParams(window.location.search);
 
 		if (isRunning && sortName) {
-			// Set only comment_overkill_sort parameter
+			// Set comment_overkill_sort parameter
 			urlParams.set('comment_overkill_sort', sortName);
+			// Set comment_overkill_days parameter if provided
+			if (daysToPreserve !== undefined) {
+				urlParams.set('comment_overkill_days', daysToPreserve.toString());
+			}
 		} else {
-			// Remove parameter when not running
+			// Remove parameters when not running
 			urlParams.delete('comment_overkill_sort');
+			urlParams.delete('comment_overkill_days');
 		}
 
 		// Update URL without reloading
@@ -81,11 +98,13 @@
 
 	// Initialize running state from URL
 	let running = getRunningStateFromUrl();
+	daysToPreserve = getDaysFromUrl();
 
 	// Debug logging
 	log("Script loaded - URL parameters:", window.location.search);
 	log("Running state from URL:", running);
 	log("Current sort from URL:", getSortFromUrl());
+	log("Days to preserve from URL:", daysToPreserve);
 
 	// Progress tracking is no longer needed since we use URL parameters
 
@@ -253,29 +272,49 @@
 	let preservedCount = 0; // Track number of preserved comments
 
 	function shouldSkipCommentByDate(commentElement) {
-		// Get the time element associated with this comment
-		const timeElement = commentElement.querySelector('time[datetime]');
+		// Try multiple possible selectors for timestamp element
+		const selectors = [
+			'time[datetime]',
+			'faceplate-time[datetime]',
+			'[data-testid="comment_timestamp"]',
+			'[data-click-id="timestamp"]',
+			'a[data-testid="comment_timestamp"]',
+			'span[data-testid="comment_timestamp"]'
+		];
+		let timeElement = null;
+		for (const selector of selectors) {
+			timeElement = commentElement.querySelector(selector);
+			if (timeElement) break;
+		}
 		if (!timeElement) {
-			// If no time element found, we can't determine the date, so don't skip
-			return false;
+			// If no time element found, we can't determine the date, so preserve the comment
+			log('shouldSkipCommentByDate: No timestamp element found, preserving comment:', commentElement);
+			return true; // Return true to skip (preserve) the comment
 		}
 
 		try {
-			const commentDateTime = new Date(timeElement.getAttribute('datetime'));
+			const datetime = timeElement.getAttribute('datetime') || timeElement.textContent;
+			const commentDateTime = new Date(datetime);
+			if (isNaN(commentDateTime.getTime())) {
+				log('shouldSkipCommentByDate: Invalid date, preserving comment:', datetime, commentElement);
+				return true; // Return true to skip (preserve) the comment
+			}
 			const cutoffDate = new Date();
-			cutoffDate.setDate(cutoffDate.getDate() - DAYS_TO_PRESERVE);
+			cutoffDate.setDate(cutoffDate.getDate() - daysToPreserve);
 
 			// If comment is newer than the cutoff date, skip it (don't delete)
 			const shouldSkip = commentDateTime > cutoffDate;
 
 			if (shouldSkip) {
 				preservedCount++;
+				log(`shouldSkipCommentByDate: Preserving comment from ${commentDateTime.toISOString()} (cutoff: ${cutoffDate.toISOString()})`);
 			}
 
 			return shouldSkip;
 		} catch (e) {
-			// If we can't parse the date, don't skip the comment
-			return false;
+			// If we can't parse the date, preserve the comment
+			log('shouldSkipCommentByDate: Error parsing date, preserving comment:', e, commentElement);
+			return true; // Return true to skip (preserve) the comment
 		}
 	}
 
@@ -585,7 +624,7 @@
 					running = false;
 					// Update status and button state when all sorts are complete
 					updateUrlState(false, 0);
-					btn.textContent = "Start Deleting";
+					updateButtonState();
 					log("All selected sorts completed, clearing state");
 					break;
 				}
@@ -606,19 +645,9 @@
 					if (idx < activeSorts.length) {
 						nextSort = activeSorts[idx];
 					}
-					updateUrlState(running, nextSort);
+					updateUrlState(running, nextSort, daysToPreserve);
 					log("Updated URL state - running: " + running + ", next sort: " + nextSort);
 					// Update progress in status display
-				}
-
-				if (idx >= activeSorts.length) {
-					log("ALL SELECTED SORTS PROCESSED — no more comments.");
-					running = false;
-					// Update status and button state when all sorts are complete
-					updateUrlState(false, 0);
-					btn.textContent = "Start Deleting";
-					log("All selected sorts completed, clearing state");
-					break;
 				}
 
 				await sleep(5000);
@@ -674,9 +703,41 @@
 		content.appendChild(title);
 
 		const warning = document.createElement("p");
-		warning.textContent = "This will permanently delete ALL your Reddit comments across all sort types (new, hot, top, controversial). Comments from the last 10 days will be preserved.";
-		warning.style.cssText = "margin-bottom: 20px; line-height: 1.4;";
+		warning.innerHTML = "This will permanently delete ALL your Reddit comments across all sort types (new, hot, top, controversial). Comments from the last <span id='days-display'>" + daysToPreserve + "</span> days will be preserved.";
+		warning.style.cssText = "margin-bottom: 10px; line-height: 1.4;";
 		content.appendChild(warning);
+
+		// Days input
+		const daysContainer = document.createElement("div");
+		daysContainer.style.cssText = "margin-bottom: 20px; display: flex; align-items: center; gap: 10px;";
+		
+		const daysLabel = document.createElement("label");
+		daysLabel.textContent = "Preserve comments from the last:";
+		daysLabel.style.cssText = "font-weight: bold;";
+		
+		const daysInput = document.createElement("input");
+		daysInput.type = "number";
+		daysInput.min = "0";
+		daysInput.max = "365";
+		daysInput.value = daysToPreserve;
+		daysInput.style.cssText = "padding: 6px 10px; border: 1px solid #ccc; border-radius: 4px; width: 70px;";
+		
+		const daysSuffix = document.createElement("span");
+		daysSuffix.textContent = "days";
+		
+		daysContainer.appendChild(daysLabel);
+		daysContainer.appendChild(daysInput);
+		daysContainer.appendChild(daysSuffix);
+		content.appendChild(daysContainer);
+
+		// Update display and variable when input changes
+		daysInput.addEventListener('input', () => {
+			const newValue = parseInt(daysInput.value, 10);
+			if (!isNaN(newValue) && newValue >= 0) {
+				daysToPreserve = newValue;
+				document.getElementById('days-display').textContent = newValue;
+			}
+		});
 
 		const note = document.createElement("p");
 		note.textContent = "Starting from current sort: " + getCurrentSort();
@@ -730,7 +791,7 @@
 
 			// Calculate starting sort and update URL
 			const currentSort = getCurrentSort();
-			updateUrlState(running, currentSort);
+			updateUrlState(running, currentSort, daysToPreserve);
 
 			main();
 		};
@@ -763,7 +824,12 @@
 
 	// Update button visual state
 	function updateButtonState() {
-		const btnText = btn.querySelector('.btn-text');
+		let btnText = btn.querySelector('.btn-text');
+		// If button HTML was corrupted (e.g., by btn.textContent), restore it
+		if (!btnText) {
+			btn.innerHTML = '<span style="font-weight: bold; font-size: 11px; opacity: 0.8; margin-right: 6px;">Reddit Comment Overkill</span><span class="btn-text">Start Deleting</span>';
+			btnText = btn.querySelector('.btn-text');
+		}
 		if (running) {
 			btnText.textContent = "Stop Deleting";
 			btn.style.background = "#d00";

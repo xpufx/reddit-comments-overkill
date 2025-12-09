@@ -7,6 +7,7 @@ A browser userscript that automatically deletes all your Reddit comments. It's d
 **Before using this script:**
 - This will **permanently delete** your Reddit comments
 - Comments from the last 10 days are preserved by default (configurable)
+- Set `DAYS_TO_PRESERVE` to 0 to delete all comments regardless of age
 - Use at your own risk - always backup important comments
 - The script includes safety features but cannot guarantee against account issues
 
@@ -102,7 +103,7 @@ const LONG_DELAY_AFTER = [10, 20];    // Pause after 10-20 deletions
 const LONG_DELAY_MS = [10000, 15000]; // Pause for 10-15 seconds
 
 // Date filtering - preserve recent comments
-const DAYS_TO_PRESERVE = 10;        // Keep comments from last 10 days
+const DAYS_TO_PRESERVE = 10;        // Keep comments from last 10 days (set to 0 to delete all comments regardless of age)
 ```
 
 ## Monitoring Progress
