@@ -1,6 +1,6 @@
 # Reddit Comments Overkill
 
-A browser userscript that automatically deletes all your Reddit comments. It's designed to be reliable and respect Reddit's rate limits while ensuring complete coverage of your comment history.
+A browser userscript that automatically deletes all your Reddit comments. It's designed to be reliable and respect Reddit's rate limits while ensuring complete coverage of your comment history. Reddit has a lot of protections in place to throttle requests, this script does NOT try to be the fastest but instead tries to ensures ALL comments will eventually be gone without user interaction.
 
 ## ⚠️ Important Warnings
 
