@@ -1,5 +1,5 @@
 // ==UserScript==
-// @name         Reddit Comment Overkill
+// @name         Reddit Comments Overkill
 // @namespace    https://github.com/xpufx/reddit-comments-overkill
 // @version      2.21
 // @description  Deletes all comments by cycling sorts reliably, retrying on rate limits, waiting for comments, handling infinite scroll & next page, with Start/Stop control.
@@ -33,7 +33,7 @@
 	/***********************
 	 * CONFIG
 	 ************************/
-	const SCRIPT_NAME = "Reddit Comment Overkill";
+	const SCRIPT_NAME = "Reddit Comments Overkill";
 	const LOGGING_ENABLED = true; // Set to false to disable console logging
 	const SORTS = ["new", "hot", "top", "controversial"];
 	const WAIT_FOR_COMMENTS_MS = 8000;
@@ -801,7 +801,7 @@
 	 * BUTTON
 	 ************************/
 	const btn = document.createElement("button");
-	btn.innerHTML = '<span style="font-weight: bold; font-size: 11px; opacity: 0.8; margin-right: 6px;">Reddit Comment Overkill</span><span class="btn-text">Start Deleting</span>';
+	btn.innerHTML = '<span style="font-weight: bold; font-size: 11px; opacity: 0.8; margin-right: 6px;">Reddit Comments Overkill</span><span class="btn-text">Start Deleting</span>';
 	Object.assign(btn.style, {
 		position: "fixed",
 		bottom: "15px",
@@ -827,7 +827,7 @@
 		let btnText = btn.querySelector('.btn-text');
 		// If button HTML was corrupted (e.g., by btn.textContent), restore it
 		if (!btnText) {
-			btn.innerHTML = '<span style="font-weight: bold; font-size: 11px; opacity: 0.8; margin-right: 6px;">Reddit Comment Overkill</span><span class="btn-text">Start Deleting</span>';
+			btn.innerHTML = '<span style="font-weight: bold; font-size: 11px; opacity: 0.8; margin-right: 6px;">Reddit Comments Overkill</span><span class="btn-text">Start Deleting</span>';
 			btnText = btn.querySelector('.btn-text');
 		}
 		if (running) {
