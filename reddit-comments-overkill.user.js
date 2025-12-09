@@ -3,7 +3,9 @@
 // @namespace    https://example.com/
 // @version      2.21
 // @description  Deletes all comments by cycling sorts reliably, retrying on rate limits, waiting for comments, handling infinite scroll & next page, with Start/Stop control.
+// Old Reddit
 // @match        https://old.reddit.com/user/*/comments*
+// STILL Old Reddit but with RES etc that displays all reddit on the normal address
 // @match        https://www.reddit.com/user/*/comments*
 // @grant        none
 // @run-at       document-idle
@@ -63,7 +65,7 @@
 
 	function updateUrlState(isRunning, sortName) {
 		const urlParams = new URLSearchParams(window.location.search);
-		
+
 		if (isRunning && sortName) {
 			// Set only comment_overkill_sort parameter
 			urlParams.set('comment_overkill_sort', sortName);
@@ -71,7 +73,7 @@
 			// Remove parameter when not running
 			urlParams.delete('comment_overkill_sort');
 		}
-		
+
 		// Update URL without reloading
 		const newUrl = window.location.pathname + (urlParams.toString() ? '?' + urlParams.toString() : '') + window.location.hash;
 		history.replaceState({}, document.title, newUrl);
@@ -633,10 +635,10 @@
 	}
 
 
-	
 
-	
-		
+
+
+
 
 	/***********************
 	 * CONFIRMATION MODAL
@@ -655,7 +657,7 @@
 			align-items: center;
 			z-index: 999997;
 		`;
-		
+
 		const content = document.createElement("div");
 		content.style.cssText = `
 			background: white;
@@ -665,25 +667,25 @@
 			max-width: 500px;
 			box-shadow: 0 4px 15px rgba(0,0,0,0.3);
 		`;
-		
+
 		const title = document.createElement("h3");
 		title.textContent = "⚠️ Confirm Bulk Comment Deletion";
 		title.style.cssText = "margin-top: 0; margin-bottom: 15px; color: #d00;";
 		content.appendChild(title);
-		
+
 		const warning = document.createElement("p");
 		warning.textContent = "This will permanently delete ALL your Reddit comments across all sort types (new, hot, top, controversial). Comments from the last 10 days will be preserved.";
 		warning.style.cssText = "margin-bottom: 20px; line-height: 1.4;";
 		content.appendChild(warning);
-		
+
 		const note = document.createElement("p");
 		note.textContent = "Starting from current sort: " + getCurrentSort();
 		note.style.cssText = "margin-bottom: 20px; font-style: italic;";
 		content.appendChild(note);
-		
+
 		const buttonContainer = document.createElement("div");
 		buttonContainer.style.cssText = "display: flex; justify-content: flex-end; gap: 10px;";
-		
+
 		const confirmBtn = document.createElement("button");
 		confirmBtn.textContent = "Confirm & Start Deleting";
 		confirmBtn.style.cssText = `
@@ -694,7 +696,7 @@
 			border-radius: 4px;
 			cursor: pointer;
 		`;
-		
+
 		const cancelBtn = document.createElement("button");
 		cancelBtn.textContent = "Cancel";
 		cancelBtn.style.cssText = `
@@ -705,31 +707,31 @@
 			border-radius: 4px;
 			cursor: pointer;
 		`;
-		
+
 		buttonContainer.appendChild(cancelBtn);
 		buttonContainer.appendChild(confirmBtn);
 		content.appendChild(buttonContainer);
 		modal.appendChild(content);
-		
+
 		// Add modal to document
 		document.body.appendChild(modal);
-		
+
 		// Handle cancel button
 		cancelBtn.onclick = () => {
 			document.body.removeChild(modal);
 			// Keep button as "Start Deleting"
 		};
-		
+
 		// Handle confirm button
 		confirmBtn.onclick = () => {
 			document.body.removeChild(modal);
 			running = true;
 			updateButtonState();
-			
+
 			// Calculate starting sort and update URL
 			const currentSort = getCurrentSort();
 			updateUrlState(running, currentSort);
-			
+
 			main();
 		};
 	}
