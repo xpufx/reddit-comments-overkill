@@ -1,6 +1,6 @@
 // ==UserScript==
-// @name         Reddit Comment Overkill — Stable Sort Cycling Edition
-// @namespace    https://example.com/
+// @name         Reddit Comment Overkill
+// @namespace    https://github.com/xpufx/reddit-comments-overkill
 // @version      2.21
 // @description  Deletes all comments by cycling sorts reliably, retrying on rate limits, waiting for comments, handling infinite scroll & next page, with Start/Stop control.
 // @downloadURL  https://github.com/xpufx/reddit-comments-overkill/raw/refs/heads/main/reddit-comments-overkill.user.js
@@ -710,21 +710,21 @@
 		// Days input
 		const daysContainer = document.createElement("div");
 		daysContainer.style.cssText = "margin-bottom: 20px; display: flex; align-items: center; gap: 10px;";
-		
+
 		const daysLabel = document.createElement("label");
 		daysLabel.textContent = "Preserve comments from the last:";
 		daysLabel.style.cssText = "font-weight: bold;";
-		
+
 		const daysInput = document.createElement("input");
 		daysInput.type = "number";
 		daysInput.min = "0";
 		daysInput.max = "365";
 		daysInput.value = daysToPreserve;
 		daysInput.style.cssText = "padding: 6px 10px; border: 1px solid #ccc; border-radius: 4px; width: 70px;";
-		
+
 		const daysSuffix = document.createElement("span");
 		daysSuffix.textContent = "days";
-		
+
 		daysContainer.appendChild(daysLabel);
 		daysContainer.appendChild(daysInput);
 		daysContainer.appendChild(daysSuffix);
