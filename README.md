@@ -26,14 +26,11 @@ A browser userscript that automatically deletes all your Reddit comments. It's d
      - [Tampermonkey](https://www.tampermonkey.net/) (Chrome/Firefox/Edge)
      - [Greasemonkey](https://www.greasespot.net/) (Firefox only)
 
-2. **Get the script**:
+2. **Install the script**:
    - Click on the `reddit-comments-overkill.user.js` file in this repository
    - Click the "Raw" button to view the raw script
-   - Copy the entire script content (Ctrl+A, Ctrl+C)
-
-3. **Install the script**:
-   - Your userscript manager should detect the script and offer to install it
-   - If not, open your userscript manager's dashboard
+   - Your userscritp manager should prompt you to install it, if it doesn't, copy the entire script content (Ctrl+A, Ctrl+C)
+   - Open your userscript manager's dashboard
    - Click "Create a new script" or the "+" button
    - Paste the copied script
    - Save (Ctrl+S or click Save)
@@ -44,7 +41,7 @@ A browser userscript that automatically deletes all your Reddit comments. It's d
 
 ## Usage
 
-1. Navigate to your Reddit user comments page:
+1. Navigate to your Reddit user comments page: (note that these urls are both for "old" reddit. It won't work on the new NEW reddit which has different frontend code.)
    - `https://old.reddit.com/user/yourusername/comments/`
    - `https://www.reddit.com/user/yourusername/comments/`
 
