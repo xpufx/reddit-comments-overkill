@@ -272,20 +272,8 @@
 	let preservedCount = 0; // Track number of preserved comments
 
 	function shouldSkipCommentByDate(commentElement) {
-		// Try multiple possible selectors for timestamp element
-		const selectors = [
-			'time[datetime]',
-			'faceplate-time[datetime]',
-			'[data-testid="comment_timestamp"]',
-			'[data-click-id="timestamp"]',
-			'a[data-testid="comment_timestamp"]',
-			'span[data-testid="comment_timestamp"]'
-		];
-		let timeElement = null;
-		for (const selector of selectors) {
-			timeElement = commentElement.querySelector(selector);
-			if (timeElement) break;
-		}
+		// Only use the reliable time[datetime] selector
+		const timeElement = commentElement.querySelector('time[datetime]');
 		if (!timeElement) {
 			// If no time element found, we can't determine the date, so preserve the comment
 			log('shouldSkipCommentByDate: No timestamp element found, preserving comment:', commentElement);
