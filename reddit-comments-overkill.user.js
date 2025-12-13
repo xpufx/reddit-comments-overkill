@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Reddit Comments Overkill
 // @namespace    https://github.com/xpufx/reddit-comments-overkill
-// @version      2.21
+// @version      2.22
 // @description  Deletes all comments by cycling sorts reliably, retrying on rate limits, waiting for comments, handling infinite scroll & next page, with Start/Stop control.
 // @downloadURL  https://github.com/xpufx/reddit-comments-overkill/raw/refs/heads/main/reddit-comments-overkill.user.js
 // @updateURL    https://github.com/xpufx/reddit-comments-overkill/raw/refs/heads/main/reddit-comments-overkill.user.js
@@ -14,19 +14,6 @@
 // ==/UserScript==
 
 
-/*
- CORE RULES IMPLEMENTED:
-
- 1. Script cycles sorts (new → top → controversial → old) ONLY AFTER each sort is fully processed.
- 2. It DOES NOT reload the same sort repeatedly.
- 3. It WAITS for comments to appear (up to 8 seconds) before declaring a sort empty.
- 4. Deletions use DOM-based detection ("delete" text in buttons/links).
- 5. Rate-limit (429) detected by monkey-patching fetch → script waits & retries.
- 6. Next-page handled on old Reddit. Infinite scroll handled if enabled.
- 7. Script loops forever until all sorts are empty.
- 8. Manual Start/Stop button provided.
-*/
-
 (function() {
 	"use strict";
 
@@ -37,7 +24,6 @@
 	const LOGGING_ENABLED = true; // Set to false to disable console logging
 	const SORTS = ["new", "hot", "top", "controversial"];
 	const WAIT_FOR_COMMENTS_MS = 8000;
-	const RATE_LIMIT_MIN = 60000;
 	const RATE_LIMIT_MAX = 1800000;
 	const SHORT_DELAY_MIN = 1000;
 	const SHORT_DELAY_MAX = 1000;
@@ -55,14 +41,21 @@
 
 	// Use URL parameter to maintain state across page reloads
 	// rco_sort presence indicates script is running
-	function getRunningStateFromUrl() {
+	function getUrlState() {
 		const urlParams = new URLSearchParams(window.location.search);
-		return urlParams.get('rco_sort') !== null;
+		const sortValue = urlParams.get('rco_sort');
+		return {
+			isRunning: sortValue !== null,
+			sortValue: sortValue
+		};
+	}
+
+	function getRunningStateFromUrl() {
+		return getUrlState().isRunning;
 	}
 
 	function getSortFromUrl() {
-		const urlParams = new URLSearchParams(window.location.search);
-		return urlParams.get('rco_sort');
+		return getUrlState().sortValue;
 	}
 
 	function getDaysFromUrl() {
