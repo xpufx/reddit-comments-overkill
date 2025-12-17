@@ -2,10 +2,6 @@
 
 A browser userscript that automatically deletes all your Reddit comments. It's designed to be reliable and respect Reddit's rate limits while ensuring complete coverage of your comment history. Reddit has a lot of protections in place to throttle requests. This script does NOT try to be the fastest but instead tries to ensure ALL comments will eventually be gone without requiring user interaction.
 
-## ⚠️ Important Warnings
-
-- **Permanent Deletion**: This will **permanently delete** your Reddit comments. Use at your own risk. Always back up important comments before running this script.
-
 ## Features
 
 - **Complete Coverage**: Cycles through all 4 sort types (`new`, `hot`, `top`, `controversial`) to find every comment. However due to the way Reddit caches comments, you may have to run the script again after some hours.
