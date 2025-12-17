@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Reddit Comments Overkill
 // @namespace    https://github.com/xpufx/reddit-comments-overkill
-// @version      2.22
+// @version      2.23
 // @description  Deletes all comments by cycling sorts reliably, retrying on rate limits, waiting for comments, handling infinite scroll & next page, with Start/Stop control.
 // @downloadURL  https://github.com/xpufx/reddit-comments-overkill/raw/refs/heads/main/reddit-comments-overkill.user.js
 // @updateURL    https://github.com/xpufx/reddit-comments-overkill/raw/refs/heads/main/reddit-comments-overkill.user.js
@@ -360,10 +360,10 @@
 			}
 
 			const lastLine = lines[lines.length - 1];
-			
+
 			// Check if last line is exactly a dot (.) after trimming whitespace
 			const endsWithDot = lastLine.trim() === '.';
-			
+
 			if (endsWithDot) {
 				preservedCount++;
 				log(`shouldSkipCommentByDot: Preserving comment ending with dot on its own line: "${lastLine}"`);
@@ -397,11 +397,11 @@
 				const skipByDate = shouldSkipCommentByDate(commentElement);
 				const skipByDot = shouldSkipCommentByDot(commentElement);
 				const shouldSkip = skipByDate || skipByDot;
-				
+
 				if (shouldSkip) {
 					log(`getDeleteButtons: Skipping comment (date: ${skipByDate}, dot: ${skipByDot})`);
 				}
-				
+
 				return !shouldSkip;
 			});
 	}
