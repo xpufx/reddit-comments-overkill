@@ -11,6 +11,8 @@ A browser userscript that automatically deletes all your Reddit comments. It's d
 - **Complete Coverage**: Cycles through all 4 sort types (`new`, `hot`, `top`, `controversial`) to find every comment. However due to the way Reddit caches comments, you may have to run the script again after some hours.
 
 - **Date Protection**: By default, comments from the last 10 days are preserved. This is configurable in the script.
+- **Dot Preservation**: Preserve comments that end with a dot (.) on their own line. Useful for keeping specific comments marked with a dot. (Default: enabled)
+- **Dry-Run Mode**: Log actions without actually deleting comments. Useful for testing dot detection and previewing deletions.
 - **Rate Limit Handling**:
     - Automatically detects rate limits (429 errors) from both `fetch` and `XMLHttpRequest`.
     - Implements exponential backoff, doubling the wait time after each rate limit detection (e.g., 60s, 120s, 240s) up to a maximum of 30 minutes.
@@ -83,6 +85,11 @@ const LONG_DELAY_MS = [10000, 15000]; // Pause for 10-15 seconds
 
 // Date filtering - preserve recent comments
 const DAYS_TO_PRESERVE = 10;        // Keep comments from last 10 days (set to 0 to delete all comments regardless of age)
+
+// Dot preservation - preserve comments ending with dot (.) on their own line
+let preserveDotComments = true; // Set to false to disable preserving comments ending with a dot on their own line
+// Dry-run mode - log actions without actually deleting
+let dryRun = false; // Set to true to enable dry-run mode
 ```
 
 ## Troubleshooting

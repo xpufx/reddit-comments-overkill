@@ -30,6 +30,8 @@
 	const LONG_DELAY_AFTER = [10, 20];
 	const LONG_DELAY_MS = [10000, 15000];
 	let daysToPreserve = 10; // Keep comments from the last N days (set to 0 to delete all comments regardless of age)
+	let preserveDotComments = true; // Preserve comments that end with a dot (.) on its own line
+	let dryRun = false; // Dry run mode: log actions without actually deleting
 
 	// Logging function to consistently identify our script
 	function log(message, ...args) {
@@ -68,7 +70,25 @@
 		return 10; // default
 	}
 
-	function updateUrlState(isRunning, sortName, daysToPreserve) {
+	function getDotPreservationFromUrl() {
+		const urlParams = new URLSearchParams(window.location.search);
+		const dotParam = urlParams.get('rco_dot');
+		if (dotParam !== null) {
+			return dotParam === 'true';
+		}
+		return true; // default
+	}
+
+	function getDryRunFromUrl() {
+		const urlParams = new URLSearchParams(window.location.search);
+		const dryRunParam = urlParams.get('rco_dryrun');
+		if (dryRunParam !== null) {
+			return dryRunParam === 'true';
+		}
+		return false; // default
+	}
+
+	function updateUrlState(isRunning, sortName, daysToPreserve, preserveDotComments, dryRun) {
 		const urlParams = new URLSearchParams(window.location.search);
 
 		if (isRunning && sortName) {
@@ -78,10 +98,20 @@
 			if (daysToPreserve !== undefined) {
 				urlParams.set('rco_days', daysToPreserve.toString());
 			}
+			// Set rco_dot parameter if provided
+			if (preserveDotComments !== undefined) {
+				urlParams.set('rco_dot', preserveDotComments.toString());
+			}
+			// Set rco_dryrun parameter if provided
+			if (dryRun !== undefined) {
+				urlParams.set('rco_dryrun', dryRun.toString());
+			}
 		} else {
 			// Remove parameters when not running
 			urlParams.delete('rco_sort');
 			urlParams.delete('rco_days');
+			urlParams.delete('rco_dot');
+			urlParams.delete('rco_dryrun');
 		}
 
 		// Update URL without reloading
@@ -92,12 +122,16 @@
 	// Initialize running state from URL
 	let running = getRunningStateFromUrl();
 	daysToPreserve = getDaysFromUrl();
+	preserveDotComments = getDotPreservationFromUrl();
+	dryRun = getDryRunFromUrl();
 
 	// Debug logging
 	log("Script loaded - URL parameters:", window.location.search);
 	log("Running state from URL:", running);
 	log("Current sort from URL:", getSortFromUrl());
 	log("Days to preserve from URL:", daysToPreserve);
+	log("Preserve dot comments from URL:", preserveDotComments);
+	log("Dry run mode from URL:", dryRun);
 
 	// Progress tracking is no longer needed since we use URL parameters
 
@@ -299,6 +333,51 @@
 		}
 	}
 
+	function shouldSkipCommentByDot(commentElement) {
+		if (!preserveDotComments) {
+			return false; // If dot preservation is disabled, don't skip
+		}
+
+		try {
+			// Get comment content using same selectors as debug script
+			const contentElement = commentElement.querySelector('.usertext-body, .comment-body, .md, .RichTextJSON-root');
+			if (!contentElement) {
+				log('shouldSkipCommentByDot: No content element found, not preserving:', commentElement);
+				return false;
+			}
+
+			const commentText = contentElement.textContent || '';
+			if (!commentText.trim()) {
+				log('shouldSkipCommentByDot: Empty comment text, not preserving:', commentElement);
+				return false;
+			}
+
+			// Split by lines and get the last non-empty line
+			const lines = commentText.split('\n').map(line => line.trim()).filter(line => line.length > 0);
+			if (lines.length === 0) {
+				log('shouldSkipCommentByDot: No non-empty lines, not preserving:', commentElement);
+				return false;
+			}
+
+			const lastLine = lines[lines.length - 1];
+			
+			// Check if last line is exactly a dot (.) after trimming whitespace
+			const endsWithDot = lastLine.trim() === '.';
+			
+			if (endsWithDot) {
+				preservedCount++;
+				log(`shouldSkipCommentByDot: Preserving comment ending with dot on its own line: "${lastLine}"`);
+				return true;
+			}
+
+			log(`shouldSkipCommentByDot: Last line is not exactly a dot: "${lastLine}"`);
+			return false;
+		} catch (e) {
+			log('shouldSkipCommentByDot: Error checking comment for dot, not preserving:', e, commentElement);
+			return false;
+		}
+	}
+
 	/***********************
 	 * COMMENT DETECTION
 	 ************************/
@@ -314,8 +393,16 @@
 					return true; // If we can't find the comment element, include the button
 				}
 
-				// Check if this comment should be skipped based on date
-				return !shouldSkipCommentByDate(commentElement);
+				// Check if this comment should be skipped based on date or dot preservation
+				const skipByDate = shouldSkipCommentByDate(commentElement);
+				const skipByDot = shouldSkipCommentByDot(commentElement);
+				const shouldSkip = skipByDate || skipByDot;
+				
+				if (shouldSkip) {
+					log(`getDeleteButtons: Skipping comment (date: ${skipByDate}, dot: ${skipByDot})`);
+				}
+				
+				return !shouldSkip;
 			});
 	}
 
@@ -346,6 +433,12 @@
 	 ************************/
 	async function deleteComment(btn) {
 		let success = false;
+
+		// Dry-run mode: log action without actually deleting
+		if (dryRun) {
+			log("DRY-RUN: Would delete comment");
+			return true;
+		}
 
 		while (!success && running) {
 			// Wait if we're currently rate limited
@@ -423,7 +516,11 @@
 			return false; // no delete buttons found
 		}
 
-		log("Found", deletes.length, "comments to delete");
+		if (dryRun) {
+			log("DRY-RUN: Found", deletes.length, "comments that would be deleted");
+		} else {
+			log("Found", deletes.length, "comments to delete");
+		}
 		// Update status with number of comments found
 
 		let deleted = 0;
@@ -604,7 +701,7 @@
 					log("ALL SELECTED SORTS PROCESSED — no more comments.");
 					running = false;
 					// Update status and button state when all sorts are complete
-					updateUrlState(false, 0);
+					updateUrlState(false, 0, undefined, preserveDotComments, dryRun);
 					updateButtonState();
 					log("All selected sorts completed, clearing state");
 					break;
@@ -626,7 +723,7 @@
 					if (idx < activeSorts.length) {
 						nextSort = activeSorts[idx];
 					}
-					updateUrlState(running, nextSort, daysToPreserve);
+					updateUrlState(running, nextSort, daysToPreserve, preserveDotComments, dryRun);
 					log("Updated URL state - running: " + running + ", next sort: " + nextSort);
 					// Update progress in status display
 				}
@@ -654,7 +751,18 @@
 	 * CONFIRMATION MODAL
 	 ************************/
 	function showConfirmationModal() {
+		// Remove any existing modal first
+		const existingModals = document.querySelectorAll('.rco-confirmation-modal');
+		for (const existingModal of existingModals) {
+			try {
+				existingModal.remove();
+			} catch (e) {
+				// Ignore errors
+			}
+		}
+
 		const modal = document.createElement("div");
+		modal.className = 'rco-confirmation-modal';
 		modal.style.cssText = `
 			position: fixed;
 			top: 0;
@@ -684,7 +792,7 @@
 		content.appendChild(title);
 
 		const warning = document.createElement("p");
-		warning.innerHTML = "This will permanently delete ALL your Reddit comments across all sort types (new, hot, top, controversial). Comments from the last <span id='days-display'>" + daysToPreserve + "</span> days will be preserved.";
+		warning.innerHTML = "This will permanently delete ALL your Reddit comments across all sort types (new, hot, top, controversial). Comments from the last <span id='days-display'>" + daysToPreserve + "</span> days will be preserved. You can also preserve comments ending with a dot (.) on their own line.";
 		warning.style.cssText = "margin-bottom: 10px; line-height: 1.4;";
 		content.appendChild(warning);
 
@@ -718,6 +826,56 @@
 				daysToPreserve = newValue;
 				document.getElementById('days-display').textContent = newValue;
 			}
+		});
+
+		// Dot preservation checkbox
+		const dotContainer = document.createElement("div");
+		dotContainer.style.cssText = "margin-bottom: 20px; display: flex; align-items: center; gap: 10px;";
+
+		const dotCheckbox = document.createElement("input");
+		dotCheckbox.type = "checkbox";
+		dotCheckbox.id = "dot-preservation";
+		dotCheckbox.checked = preserveDotComments;
+		dotCheckbox.style.cssText = "width: 18px; height: 18px;";
+
+		const dotLabel = document.createElement("label");
+		dotLabel.htmlFor = "dot-preservation";
+		dotLabel.textContent = "Preserve comments ending with a dot (.) on their own line";
+		dotLabel.style.cssText = "font-weight: bold; cursor: pointer;";
+
+		dotContainer.appendChild(dotCheckbox);
+		dotContainer.appendChild(dotLabel);
+		content.appendChild(dotContainer);
+
+		// Update variable when checkbox changes
+		dotCheckbox.addEventListener('change', () => {
+			preserveDotComments = dotCheckbox.checked;
+			log("Dot preservation setting changed to:", preserveDotComments);
+		});
+
+		// Dry-run checkbox
+		const dryRunContainer = document.createElement("div");
+		dryRunContainer.style.cssText = "margin-bottom: 20px; display: flex; align-items: center; gap: 10px;";
+
+		const dryRunCheckbox = document.createElement("input");
+		dryRunCheckbox.type = "checkbox";
+		dryRunCheckbox.id = "dry-run";
+		dryRunCheckbox.checked = dryRun;
+		dryRunCheckbox.style.cssText = "width: 18px; height: 18px;";
+
+		const dryRunLabel = document.createElement("label");
+		dryRunLabel.htmlFor = "dry-run";
+		dryRunLabel.textContent = "Dry-run mode: log actions without actually deleting";
+		dryRunLabel.style.cssText = "font-weight: bold; cursor: pointer;";
+
+		dryRunContainer.appendChild(dryRunCheckbox);
+		dryRunContainer.appendChild(dryRunLabel);
+		content.appendChild(dryRunContainer);
+
+		// Update variable when checkbox changes
+		dryRunCheckbox.addEventListener('change', () => {
+			dryRun = dryRunCheckbox.checked;
+			log("Dry-run setting changed to:", dryRun);
 		});
 
 		const note = document.createElement("p");
@@ -760,19 +918,27 @@
 
 		// Handle cancel button
 		cancelBtn.onclick = () => {
-			document.body.removeChild(modal);
+			try {
+				modal.remove();
+			} catch (e) {
+				// Ignore errors
+			}
 			// Keep button as "Start Deleting"
 		};
 
 		// Handle confirm button
 		confirmBtn.onclick = () => {
-			document.body.removeChild(modal);
+			try {
+				modal.remove();
+			} catch (e) {
+				// Ignore errors
+			}
 			running = true;
 			updateButtonState();
 
 			// Calculate starting sort and update URL
 			const currentSort = getCurrentSort();
-			updateUrlState(running, currentSort, daysToPreserve);
+			updateUrlState(running, currentSort, daysToPreserve, preserveDotComments, dryRun);
 
 			main();
 		};
@@ -855,7 +1021,7 @@
 		} else {
 			// Stopping
 			running = false;
-			updateUrlState(false, 0);
+			updateUrlState(false, 0, undefined, preserveDotComments, dryRun);
 			updateButtonState();
 		}
 	};
