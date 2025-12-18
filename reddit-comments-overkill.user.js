@@ -296,7 +296,6 @@
 	/***********************
 	 * DATE FILTERING
 	 ************************/
-	let preservedCount = 0; // Track number of preserved comments
 
 	function shouldSkipCommentByDate(commentElement) {
 		// Only use the reliable time[datetime] selector
@@ -321,7 +320,6 @@
 			const shouldSkip = commentDateTime > cutoffDate;
 
 			if (shouldSkip) {
-				preservedCount++;
 				log(`shouldSkipCommentByDate: Preserving comment from ${commentDateTime.toISOString()} (cutoff: ${cutoffDate.toISOString()})`);
 			}
 
@@ -365,7 +363,6 @@
 			const endsWithDot = lastLine.trim() === '.';
 
 			if (endsWithDot) {
-				preservedCount++;
 				log(`shouldSkipCommentByDot: Preserving comment ending with dot on its own line: "${lastLine}"`);
 				return true;
 			}
@@ -735,8 +732,6 @@
 				// Wait before continuing to avoid getting stuck in an error loop
 				await sleep(10000);
 				// Resume status after error pause
-				if (running) {
-				}
 			}
 		}
 	}
