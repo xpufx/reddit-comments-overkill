@@ -264,22 +264,14 @@
 
 	function gotoSort(sort) {
 		log("Switching sort →", sort, "via URL navigation");
-		log("Current URL state - running:", running, "sort:", getSortFromUrl());
 
-		// Always use URL navigation to ensure state is preserved
 		const u = new URL(location.href);
-		log("Original URL:", location.href);
 		u.searchParams.set("sort", sort);
-		log("Sort parameter set to:", sort);
-		log("URL after setting sort:", u.toString());
 
-		// Preserve our state parameters
-		if (running) {
-			const currentSort = getSortFromUrl();
-			log("Preserving sort parameter:", currentSort);
-			if (currentSort) {
-				u.searchParams.set("rco_sort", currentSort);
-			}
+		// Preserve all rco state parameters across navigation
+		for (const key of ['rco_sort', 'rco_days', 'rco_dot', 'rco_dryrun']) {
+			const val = new URLSearchParams(window.location.search).get(key);
+			if (val !== null) u.searchParams.set(key, val);
 		}
 
 		log("Final URL before navigation:", u.toString());
@@ -289,7 +281,7 @@
 		} else {
 			log("URL unchanged, no navigation needed");
 		}
-		return false; // Indicate that we had to reload
+		return false;
 	}
 
 
@@ -297,80 +289,97 @@
 	 * DATE FILTERING
 	 ************************/
 
+	function parseAgeDays(text) {
+		const m = text.toLowerCase().match(/^(\d+)\s*(minute|hour|day|month|year)s?\s+ago$/);
+		if (!m) return null;
+		const n = parseInt(m[1], 10);
+		switch (m[2]) {
+			case 'minute': return n / 1440;
+			case 'hour':   return n / 24;
+			case 'day':    return n;
+			case 'month':  return n * 30;
+			case 'year':   return n * 365;
+			default:       return null;
+		}
+	}
+
 	function shouldSkipCommentByDate(commentElement) {
-		// Only use the reliable time[datetime] selector
-		const timeElement = commentElement.querySelector('time[datetime]');
-		if (!timeElement) {
-			// If no time element found, we can't determine the date, so preserve the comment
-			log('shouldSkipCommentByDate: No timestamp element found, preserving comment:', commentElement);
-			return true; // Return true to skip (preserve) the comment
+		const timeEl = commentElement.querySelector('time[datetime]');
+		if (!timeEl) {
+			log('shouldSkipCommentByDate: No time element, preserving');
+			return true;
 		}
 
+		// Strategy 1: parse the human-readable text ("10 days ago") — avoids timezone issues
+		const text = (timeEl.textContent || '').trim();
+		if (text) {
+			const age = parseAgeDays(text);
+			if (age !== null) {
+				log('shouldSkipCommentByDate: text="' + text + '" ageDays=' + age + ' preserveDays=' + daysToPreserve);
+				return age < daysToPreserve;
+			}
+		}
+
+		// Strategy 2: fall back to datetime attribute parsing
 		try {
-			const datetime = timeElement.getAttribute('datetime') || timeElement.textContent;
-			const commentDateTime = new Date(datetime);
-			if (isNaN(commentDateTime.getTime())) {
-				log('shouldSkipCommentByDate: Invalid date, preserving comment:', datetime, commentElement);
-				return true; // Return true to skip (preserve) the comment
+			const raw = (timeEl.getAttribute('datetime') || '').trim();
+			if (!raw) {
+				log('shouldSkipCommentByDate: Empty datetime, preserving');
+				return true;
 			}
-			const cutoffDate = new Date();
-			cutoffDate.setDate(cutoffDate.getDate() - daysToPreserve);
-
-			// If comment is newer than the cutoff date, skip it (don't delete)
-			const shouldSkip = commentDateTime > cutoffDate;
-
-			if (shouldSkip) {
-				log(`shouldSkipCommentByDate: Preserving comment from ${commentDateTime.toISOString()} (cutoff: ${cutoffDate.toISOString()})`);
+			const commentDate = new Date(raw);
+			if (isNaN(commentDate.getTime())) {
+				log('shouldSkipCommentByDate: Unparseable datetime "' + raw + '", preserving');
+				return true;
 			}
-
-			return shouldSkip;
+			const cutoff = new Date();
+			cutoff.setDate(cutoff.getDate() - daysToPreserve);
+			log('shouldSkipCommentByDate: fallback datetime comment=' + commentDate.toISOString() + ' cutoff=' + cutoff.toISOString());
+			return commentDate > cutoff;
 		} catch (e) {
-			// If we can't parse the date, preserve the comment
-			log('shouldSkipCommentByDate: Error parsing date, preserving comment:', e, commentElement);
-			return true; // Return true to skip (preserve) the comment
+			log('shouldSkipCommentByDate: Error:', e);
+			return true;
 		}
 	}
 
 	function shouldSkipCommentByDot(commentElement) {
-		if (!preserveDotComments) {
-			return false; // If dot preservation is disabled, don't skip
-		}
+		if (!preserveDotComments) return false;
 
 		try {
-			// Get comment content using same selectors as debug script
-			const contentElement = commentElement.querySelector('.usertext-body, .comment-body, .md, .RichTextJSON-root');
-			if (!contentElement) {
-				log('shouldSkipCommentByDot: No content element found, not preserving:', commentElement);
+			// Narrow to the content area – prefer .usertext-body, fall back to .md
+			const body = commentElement.querySelector('.usertext-body');
+			const md = body || commentElement.querySelector('.md');
+			if (!md) {
+				log('shouldSkipCommentByDot: No .md found, not preserving');
 				return false;
 			}
 
-			const commentText = contentElement.textContent || '';
-			if (!commentText.trim()) {
-				log('shouldSkipCommentByDot: Empty comment text, not preserving:', commentElement);
+			// Use innerText so block elements (<p>, <li>, etc.) produce \n between them.
+			// textContent concatenates text nodes without separators, which makes dot-on-its-own-line
+			// detection impossible when Reddit minifies the HTML.
+			let raw = md.innerText || md.textContent || '';
+			if (!raw.trim()) {
+				log('shouldSkipCommentByDot: Empty comment text, not preserving');
 				return false;
 			}
 
-			// Split by lines and get the last non-empty line
-			const lines = commentText.split('\n').map(line => line.trim()).filter(line => line.length > 0);
-			if (lines.length === 0) {
-				log('shouldSkipCommentByDot: No non-empty lines, not preserving:', commentElement);
+			raw = raw.replace(/\r\n?/g, '\n');
+			const lines = raw.split('\n')
+				.map(l => l.replace(/[\s\u00A0\u2000-\u200A\u202F\u205F\u3000]+/g, ''))
+				.filter(l => l.length > 0);
+			if (!lines.length) {
+				log('shouldSkipCommentByDot: No non-empty lines after cleaning, not preserving');
 				return false;
 			}
 
-			const lastLine = lines[lines.length - 1];
-
-			// Check if last line is exactly a dot (.) after trimming whitespace
-			const endsWithDot = lastLine.trim() === '.';
-
-			if (endsWithDot) {
-				log(`shouldSkipCommentByDot: Preserving comment ending with dot on its own line: "${lastLine}"`);
+			if (lines[lines.length - 1] === '.') {
+				log('shouldSkipCommentByDot: Preserving comment ending with dot');
 				return true;
 			}
 
-			log(`shouldSkipCommentByDot: Last line is not exactly a dot: "${lastLine}"`);
 			return false;
 		} catch (e) {
-			log('shouldSkipCommentByDot: Error checking comment for dot, not preserving:', e, commentElement);
+			log('shouldSkipCommentByDot: Error:', e);
 			return false;
 		}
 	}
@@ -611,6 +620,7 @@
 		}
 
 		log("Sort complete:", sort);
+		return true;
 	}
 
 
