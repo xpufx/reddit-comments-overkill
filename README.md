@@ -36,7 +36,7 @@ A browser userscript that automatically deletes all your Reddit comments. It's d
 ## Usage
 
 1. Navigate to your Reddit user comments page on **old Reddit** (the new Reddit UI is not supported):
-   - `https://old.reddit.com/user/yourusername/comments/`
+   - `https://old.reddit.com/user/`*`yourusername`*`/comments/` — replace *`yourusername`* with your actual username
 
 2. Click the **"Start Deleting"** button in the bottom-right corner
 
