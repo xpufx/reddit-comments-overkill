@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Reddit Comments Overkill
 // @namespace    https://github.com/xpufx/reddit-comments-overkill
-// @version      2.24
+// @version      2.25
 // @description  Deletes all comments by cycling sorts reliably, retrying on rate limits, waiting for comments, handling infinite scroll & next page, with Start/Stop control.
 // @downloadURL  https://github.com/xpufx/reddit-comments-overkill/raw/refs/heads/main/reddit-comments-overkill.user.js
 // @updateURL    https://github.com/xpufx/reddit-comments-overkill/raw/refs/heads/main/reddit-comments-overkill.user.js
@@ -32,6 +32,7 @@
 	let daysToPreserve = 10; // Keep comments from the last N days (set to 0 to delete all comments regardless of age)
 	let preserveDotComments = true; // Preserve comments that end with a dot (.) on its own line
 	let dryRun = false; // Dry run mode: log actions without actually deleting
+	let simulate = true; // Simulation mode: click "No" on confirmation instead of "Yes" — safe for debugging
 
 	// Logging function to consistently identify our script
 	function log(message, ...args) {
@@ -88,6 +89,15 @@
 		return false; // default
 	}
 
+	function getSimulateFromUrl() {
+		const urlParams = new URLSearchParams(window.location.search);
+		const simParam = urlParams.get('rco_simulate');
+		if (simParam !== null) {
+			return simParam === 'true';
+		}
+		return true; // default to safe simulation mode
+	}
+
 	function updateUrlState(isRunning, sortName, daysToPreserve, preserveDotComments, dryRun) {
 		const urlParams = new URLSearchParams(window.location.search);
 
@@ -106,12 +116,15 @@
 			if (dryRun !== undefined) {
 				urlParams.set('rco_dryrun', dryRun.toString());
 			}
+			// Set rco_simulate parameter
+			urlParams.set('rco_simulate', simulate.toString());
 		} else {
 			// Remove parameters when not running
 			urlParams.delete('rco_sort');
 			urlParams.delete('rco_days');
 			urlParams.delete('rco_dot');
 			urlParams.delete('rco_dryrun');
+			urlParams.delete('rco_simulate');
 		}
 
 		// Update URL without reloading
@@ -124,6 +137,7 @@
 	daysToPreserve = getDaysFromUrl();
 	preserveDotComments = getDotPreservationFromUrl();
 	dryRun = getDryRunFromUrl();
+	simulate = getSimulateFromUrl();
 
 	// Debug logging
 	log("Script loaded - URL parameters:", window.location.search);
@@ -132,6 +146,7 @@
 	log("Days to preserve from URL:", daysToPreserve);
 	log("Preserve dot comments from URL:", preserveDotComments);
 	log("Dry run mode from URL:", dryRun);
+	log("Simulate mode from URL:", simulate);
 
 	// Progress tracking is no longer needed since we use URL parameters
 
@@ -269,7 +284,7 @@
 		u.searchParams.set("sort", sort);
 
 		// Preserve all rco state parameters across navigation
-		for (const key of ['rco_sort', 'rco_days', 'rco_dot', 'rco_dryrun']) {
+		for (const key of ['rco_sort', 'rco_days', 'rco_dot', 'rco_dryrun', 'rco_simulate']) {
 			const val = new URLSearchParams(window.location.search).get(key);
 			if (val !== null) u.searchParams.set(key, val);
 		}
@@ -389,10 +404,11 @@
 	 ************************/
 	function getDeleteButtons() {
 		// More robust selector using data attribute and class
-		return [...document.querySelectorAll("a[data-event-action='delete'], a.togglebutton")]
-			.filter(el => /delete/i.test(el.textContent))
-			// Additionally filter to skip comments that are too recent
-			.filter(deleteBtn => {
+		const allButtons = [...document.querySelectorAll("a[data-event-action='delete'], a.togglebutton")]
+			.filter(el => /delete/i.test(el.textContent));
+
+		// Additionally filter to skip comments that are too recent
+		const filtered = allButtons.filter(deleteBtn => {
 				// Find the comment element that contains this delete button
 				const commentElement = deleteBtn.closest('.comment, .thing, .entry, [id^=t1_]');
 				if (!commentElement) {
@@ -410,6 +426,9 @@
 
 				return !shouldSkip;
 			});
+
+		log(`getDeleteButtons: ${allButtons.length} total buttons, ${filtered.length} after filtering`);
+		return filtered;
 	}
 
 	async function waitForComments() {
@@ -453,6 +472,31 @@
 			try {
 				btn.click();
 				await sleep(300);
+
+				if (simulate) {
+					// Simulation mode: click "No" on confirmation to see what would be deleted
+					const no = [...document.querySelectorAll("a.no, a.cancel, .option a")]
+						.find(e => /^(no|cancel)$/i.test(e.textContent.trim()));
+					const yes = [...document.querySelectorAll("a.yes, .option.error.active a")]
+						.find(e => e.textContent.trim().toLowerCase() === "yes");
+					if (no) {
+						no.click();
+						log("SIMULATE: Clicked No on confirmation — comment NOT deleted");
+					} else if (yes) {
+						// If there's a Yes button but no No button, try clicking the cancel/close action
+						const cancel = document.querySelector('.delete-field.cancel a, a.cancel');
+						if (cancel) {
+							cancel.click();
+							log("SIMULATE: Clicked cancel");
+						} else {
+							log("SIMULATE: Found Yes button but no No/Cancel button, skipping");
+						}
+					} else {
+						log("SIMULATE: No confirmation dialog found");
+					}
+					await sleep(rand(SHORT_DELAY_MIN, SHORT_DELAY_MAX));
+					return true;
+				}
 
 				const yes = [...document.querySelectorAll("a.yes, .option.error.active a")]
 					.find(e => e.textContent.trim().toLowerCase() === "yes");
@@ -524,6 +568,8 @@
 
 		if (dryRun) {
 			log("DRY-RUN: Found", deletes.length, "comments that would be deleted");
+		} else if (simulate) {
+			log("SIMULATE: Found", deletes.length, "comments that would be targeted");
 		} else {
 			log("Found", deletes.length, "comments to delete");
 		}
@@ -797,7 +843,8 @@
 		content.appendChild(title);
 
 		const warning = document.createElement("p");
-		warning.innerHTML = "This will permanently delete ALL your Reddit comments across all sort types (new, hot, top, controversial). Comments from the last <span id='days-display'>" + daysToPreserve + "</span> days will be preserved. You can also preserve comments ending with a dot (.) on their own line.";
+		const modeText = simulate ? "SIMULATION MODE — comments will NOT be deleted" : "Comments WILL be permanently deleted";
+		warning.innerHTML = `[${modeText}]<br><br>This will process all your Reddit comments across all sort types (new, hot, top, controversial). Comments from the last <span id='days-display'>${daysToPreserve}</span> days will be preserved. You can also preserve comments ending with a dot (.) on their own line.`;
 		warning.style.cssText = "margin-bottom: 10px; line-height: 1.4;";
 		content.appendChild(warning);
 
@@ -881,6 +928,31 @@
 		dryRunCheckbox.addEventListener('change', () => {
 			dryRun = dryRunCheckbox.checked;
 			log("Dry-run setting changed to:", dryRun);
+		});
+
+		// Simulation mode checkbox (only relevant when dry-run is off)
+		const simContainer = document.createElement("div");
+		simContainer.style.cssText = "margin-bottom: 20px; display: flex; align-items: center; gap: 10px;";
+
+		const simCheckbox = document.createElement("input");
+		simCheckbox.type = "checkbox";
+		simCheckbox.id = "simulate-mode";
+		simCheckbox.checked = simulate;
+		simCheckbox.style.cssText = "width: 18px; height: 18px;";
+
+		const simLabel = document.createElement("label");
+		simLabel.htmlFor = "simulate-mode";
+		simLabel.textContent = "Simulation mode: click No on confirmation (safe)";
+		simLabel.style.cssText = "font-weight: bold; cursor: pointer;";
+
+		simContainer.appendChild(simCheckbox);
+		simContainer.appendChild(simLabel);
+		content.appendChild(simContainer);
+
+		// Update variable when checkbox changes
+		simCheckbox.addEventListener('change', () => {
+			simulate = simCheckbox.checked;
+			log("Simulation mode changed to:", simulate);
 		});
 
 		const note = document.createElement("p");
