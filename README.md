@@ -6,9 +6,9 @@ A browser userscript that automatically deletes all your Reddit comments. It's d
 
 - **Complete Coverage**: Cycles through all 4 sort types (`new`, `hot`, `top`, `controversial`) to find every comment. However due to the way Reddit caches comments, you may have to run the script again after some hours.
 
-- **Date Protection**: By default, comments from the last 10 days are preserved. This is configurable in the script.
-- **Dot Preservation**: If you want to keep a particular comment, first make sure it has a single dot at the end of the comment on its own line and then make sure this feature is enabled. (Default: enabled)
-- **Dry-Run Mode**: Log actions without actually deleting comments. Useful for testing dot detection and previewing deletions.
+- **Date Protection**: By default, comments from the last 10 days are preserved. Configurable in the confirmation modal.
+- **Dot Preservation**: If you want to keep a particular comment, first make sure it has a single dot at the end of the comment on its own line. Toggle this feature in the confirmation modal. (Default: enabled)
+- **Dry-Run Mode**: Log actions without actually deleting comments. Useful for testing dot detection and previewing deletions. Toggle in the confirmation modal.
 - **Rate Limit Handling**:
     - Automatically detects rate limits (429 errors) from both `fetch` and `XMLHttpRequest`.
     - Implements exponential backoff, doubling the wait time after each rate limit detection (e.g., 60s, 120s, 240s) up to a maximum of 30 minutes.
@@ -27,77 +27,54 @@ A browser userscript that automatically deletes all your Reddit comments. It's d
 2. **Install the script**:
    - Click on the `reddit-comments-overkill.user.js` file in this repository
    - Click the "Raw" button to view the raw script
-   - Your userscritp manager should prompt you to install it, if it doesn't, copy the entire script content (Ctrl+A, Ctrl+C)
-   - Open your userscript manager's dashboard
-   - Click "Create a new script" or the "+" button
-   - Paste the copied script
-   - Save (Ctrl+S or click Save)
+   - Your userscript manager should prompt you to install it — if it doesn't, copy the entire script content (Ctrl+A, Ctrl+C), open your userscript manager's dashboard, create a new script, paste, and save (Ctrl+S)
 
-4. **Verify installation**:
-   - Go to your Reddit user comments page (see Usage below)
+3. **Verify installation**:
+   - Go to your Reddit user comments page on old Reddit (see Usage below)
    - You should see a "Reddit Comments Overkill" button in the bottom-right corner
 
 ## Usage
 
-1. Navigate to your Reddit user comments page: (note that these urls are both for "old" reddit. It won't work on the new NEW reddit which has different frontend code.)
+1. Navigate to your Reddit user comments page on **old Reddit** (the new Reddit UI is not supported):
    - `https://old.reddit.com/user/yourusername/comments/`
-   - `https://www.reddit.com/user/yourusername/comments/`
 
 2. Click the **"Start Deleting"** button in the bottom-right corner
 
-3. A confirmation modal will appear warning about bulk deletion
+3. A confirmation modal will appear where you can configure:
+   - **Days to preserve** (default: 10)
+   - **Dot preservation** toggle (default: enabled)
+   - **Dry-run mode** toggle (default: disabled)
+   
 4. The script will:
    - Begin deleting comments starting from the current page's sort
    - Process all 4 sort types automatically (new → hot → top → controversial)
    - Show progress in browser console
    - Handle rate limits and pagination automatically
-   - Preserve comments from the last 10 days
+   - Preserve recent comments and dot-marked comments based on your settings
 
 5. To stop the process, click **"Stop Deleting"** (button turns red when running)
 
 ## Configuration
 
-Edit the following parameters in the script to customize behavior:
+Most settings can be configured in the confirmation modal when you click "Start Deleting":
 
-```javascript
-// Sort types to cycle through (processes all 4 automatically)
-const SORTS = ["new", "hot", "top", "controversial"];
+- **Days to preserve**: Number input (0–365) to set how many days of recent comments to keep
+- **Dot preservation**: Checkbox to preserve comments ending with a single `.` on its own line
+- **Dry-run mode**: Checkbox to log actions without actually deleting
 
-// How long to wait for comments to load (milliseconds)
-const WAIT_FOR_COMMENTS_MS = 8000;
-
-// Rate limiting configuration
-const RATE_LIMIT_MIN = 60000;      // 1 minute minimum wait
-const RATE_LIMIT_MAX = 1800000;    // 30 minutes maximum wait
-const BASE_RATE_LIMIT_WAIT = 60000; // Base wait time for rate limits
-
-// Delay between deletion attempts (1 second)
-const SHORT_DELAY_MIN = 1000;      // 1 second
-const SHORT_DELAY_MAX = 1000;      // 1 second
-
-// Long pause configuration (prevents rate limiting)
-const LONG_DELAY_AFTER = [10, 20];    // Pause after 10-20 deletions
-const LONG_DELAY_MS = [10000, 15000]; // Pause for 10-15 seconds
-
-// Date filtering - preserve recent comments
-const DAYS_TO_PRESERVE = 10;        // Keep comments from last 10 days (set to 0 to delete all comments regardless of age)
-
-// Dot preservation - preserve comments ending with dot (.) on their own line
-let preserveDotComments = true; // Set to false to disable preserving comments ending with a dot on their own line
-// Dry-run mode - log actions without actually deleting
-let dryRun = false; // Set to true to enable dry-run mode
-```
+For advanced configuration (rate limits, delays, sort order), edit the `CONFIG` section at the top of the script file.
 
 ## Troubleshooting
 
 ### Script not starting
-- Ensure you're on your user comments page (URL should contain `/user/yourusername/comments/`)
-- Check that Tampermonkey/Greasemonkey is enabled and the script is active
+- Ensure you're on your old Reddit user comments page (URL should contain `old.reddit.com/user/yourusername/comments/`)
+- Check that your userscript manager is enabled and the script is active
 - Look for the "Reddit Comments Overkill" button in the bottom-right corner
-- Open browser console (F12) to see if script is loading
+- Open browser console (F12) to see if the script is loading
 
 ### Comments not being deleted
-- Check if comments are newer than 10 days (they're preserved by default)
+- Check if comments are newer than your configured preserve days (they're preserved by default)
+- Check if comments end with a dot on its own line (dot preservation is enabled by default)
 - Open browser console (F12) to see script activity and error messages
 - Check if rate limiting is active (script will wait automatically)
 
