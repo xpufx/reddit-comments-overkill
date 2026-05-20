@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Reddit Comments Overkill
 // @namespace    https://github.com/xpufx/reddit-comments-overkill
-// @version      2.25
+// @version      2.26
 // @description  Deletes all comments by cycling sorts reliably, retrying on rate limits, waiting for comments, handling infinite scroll & next page, with Start/Stop control.
 // @downloadURL  https://github.com/xpufx/reddit-comments-overkill/raw/refs/heads/main/reddit-comments-overkill.user.js
 // @updateURL    https://github.com/xpufx/reddit-comments-overkill/raw/refs/heads/main/reddit-comments-overkill.user.js
@@ -331,7 +331,7 @@
 			const age = parseAgeDays(text);
 			if (age !== null) {
 				log('shouldSkipCommentByDate: text="' + text + '" ageDays=' + age + ' preserveDays=' + daysToPreserve);
-				return age < daysToPreserve;
+				return age <= daysToPreserve;
 			}
 		}
 
@@ -350,7 +350,7 @@
 			const cutoff = new Date();
 			cutoff.setDate(cutoff.getDate() - daysToPreserve);
 			log('shouldSkipCommentByDate: fallback datetime comment=' + commentDate.toISOString() + ' cutoff=' + cutoff.toISOString());
-			return commentDate > cutoff;
+			return commentDate >= cutoff;
 		} catch (e) {
 			log('shouldSkipCommentByDate: Error:', e);
 			return true;
