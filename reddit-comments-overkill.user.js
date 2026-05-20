@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Reddit Comments Overkill
 // @namespace    https://github.com/xpufx/reddit-comments-overkill
-// @version      2.26
+// @version      2.27
 // @description  Deletes all comments by cycling sorts reliably, retrying on rate limits, waiting for comments, handling infinite scroll & next page, with Start/Stop control.
 // @downloadURL  https://github.com/xpufx/reddit-comments-overkill/raw/refs/heads/main/reddit-comments-overkill.user.js
 // @updateURL    https://github.com/xpufx/reddit-comments-overkill/raw/refs/heads/main/reddit-comments-overkill.user.js
@@ -576,6 +576,8 @@
 		// Update status with number of comments found
 
 		let deleted = 0;
+		// Generate the initial pause target once (not per iteration like before)
+		let nextPauseTarget = rand(LONG_DELAY_AFTER[0], LONG_DELAY_AFTER[1]);
 
 		for (const btn of deletes) {
 			if (!running) break;
@@ -590,11 +592,12 @@
 			}
 
 			// periodic long pause to avoid rate limit
-			const [minN, maxN] = LONG_DELAY_AFTER;
-			if (deleted % rand(minN, maxN) === 0) {
+			if (deleted >= nextPauseTarget) {
 				const p = rand(LONG_DELAY_MS[0], LONG_DELAY_MS[1]);
-				log("Long pause", p / 1000, "seconds");
+				log("Long pause after", deleted, "deletions, waiting", p / 1000, "seconds");
 				await sleep(p);
+				// Set next pause target: another random interval from the current count
+				nextPauseTarget = deleted + rand(LONG_DELAY_AFTER[0], LONG_DELAY_AFTER[1]);
 			}
 		}
 
@@ -675,7 +678,7 @@
 	/*************************
 	 * MAIN LOOP
 	 ************************/
-	async function main() {
+	async function main(isFreshStart = false) {
 		// Always process all 4 sorts
 		const activeSorts = SORTS;
 		log("Processing all sorts:", activeSorts);
@@ -684,7 +687,7 @@
 		const urlHasRunningState = getRunningStateFromUrl();
 		let idx = 0;
 
-		if (urlHasRunningState) {
+		if (urlHasRunningState && !isFreshStart) {
 			// Actual resume: page loaded with URL params, no modal was shown
 			log("Resuming from URL state");
 			const urlSort = getSortFromUrl();
@@ -706,16 +709,9 @@
 				}
 			}
 		} else {
-			// Fresh start - start from current page sort
-			log("Starting fresh, checking current page sort");
-			const currentSort = getCurrentSort();
-			const currentSortIndex = activeSorts.indexOf(currentSort);
-			if (currentSortIndex !== -1) {
-				idx = currentSortIndex;
-				log("Starting from current sort:", currentSort, "at index:", idx);
-			} else {
-				log("Current sort not found, starting from first sort");
-			}
+			// Fresh start - always start from the first sort to ensure all sorts are processed
+			log("Starting fresh — processing all sorts from the beginning");
+			idx = 0;
 		}
 
 		// Safety check: ensure idx is valid
@@ -732,10 +728,13 @@
 		// Track which sorts have been completed to skip them if we encounter them again
 		const completedSorts = new Set();
 
-		// Mark all previous sorts as completed if starting from a middle position
-		for (let i = 0; i < idx; i++) {
-			if (i < activeSorts.length) {
-				completedSorts.add(activeSorts[i]);
+		// Mark all previous sorts as completed if resuming from a middle position
+		// (only on genuine resume, not on fresh start — fresh start must process ALL sorts)
+		if (urlHasRunningState && !isFreshStart) {
+			for (let i = 0; i < idx; i++) {
+				if (i < activeSorts.length) {
+					completedSorts.add(activeSorts[i]);
+				}
 			}
 		}
 
@@ -754,7 +753,7 @@
 					log("ALL SELECTED SORTS PROCESSED — no more comments.");
 					running = false;
 					// Update status and button state when all sorts are complete
-					updateUrlState(false, 0, undefined, preserveDotComments, dryRun);
+					updateUrlState(false, '', undefined, preserveDotComments, dryRun);
 					updateButtonState();
 					log("All selected sorts completed, clearing state");
 					break;
@@ -1005,6 +1004,10 @@
 
 		// Handle confirm button
 		confirmBtn.onclick = () => {
+			if (mainRunning) {
+				log("A deletion session is already active, ignoring confirm");
+				return;
+			}
 			try {
 				modal.remove();
 			} catch (e) {
@@ -1017,7 +1020,8 @@
 			const currentSort = getCurrentSort();
 			updateUrlState(running, currentSort, daysToPreserve, preserveDotComments, dryRun);
 
-			main();
+			mainRunning = true;
+			main(true).finally(() => { mainRunning = false; }); // true = fresh start — process ALL 4 sorts
 		};
 	}
 
@@ -1083,14 +1087,23 @@
 	running = getRunningStateFromUrl();
 	updateButtonState();
 
+	// Guard to prevent multiple concurrent main() loops
+	let mainRunning = false;
+
 	btn.onclick = () => {
 		if (!running) {
+			// Prevent starting another main() instance if one is still active
+			if (mainRunning) {
+				log("A deletion session is already active, ignoring click");
+				return;
+			}
 			// Starting fresh - check if we need confirmation
 			if (getRunningStateFromUrl()) {
 				// Already has rco_sort parameter - resume without confirmation
 				running = true;
 				updateButtonState();
-				main();
+				mainRunning = true;
+				main().finally(() => { mainRunning = false; });
 			} else {
 				// Fresh start - show confirmation modal
 				showConfirmationModal();
@@ -1098,15 +1111,10 @@
 		} else {
 			// Stopping
 			running = false;
-			updateUrlState(false, 0, undefined, preserveDotComments, dryRun);
+			updateUrlState(false, '', undefined, preserveDotComments, dryRun);
 			updateButtonState();
 		}
 	};
-
-	// Add cleanup on page unload
-	window.addEventListener('beforeunload', () => {
-		// No cleanup needed since we use URL parameters
-	});
 
 	// Check if the script should start automatically based on URL state
 	if (getRunningStateFromUrl()) {
@@ -1114,8 +1122,8 @@
 		running = true; // Ensure running is true when resuming
 		// Update button to reflect running status
 		updateButtonState();
-
-		main();
+		mainRunning = true;
+		main().finally(() => { mainRunning = false; });
 	}
 
 })();
