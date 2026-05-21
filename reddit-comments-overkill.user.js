@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Reddit Comments Overkill
 // @namespace    https://github.com/xpufx/reddit-comments-overkill
-// @version      2.39
+// @version      2.40
 // @description  Deletes all comments by cycling sorts reliably, retrying on rate limits, waiting for comments, handling infinite scroll & next page, with Start/Stop control.
 // @downloadURL  https://github.com/xpufx/reddit-comments-overkill/raw/refs/heads/main/reddit-comments-overkill.user.js
 // @updateURL    https://github.com/xpufx/reddit-comments-overkill/raw/refs/heads/main/reddit-comments-overkill.user.js
@@ -857,10 +857,10 @@
 		title.textContent = "⚠️ Confirm Bulk Comment Deletion";
 		// Modal logo
 		const modalLogo = document.createElement("img");
-		modalLogo.src = LOGO_64;
+		modalLogo.src = LOGO_120;
 		modalLogo.alt = '';
 		Object.assign(modalLogo.style, {
-			width: '24px', height: '26px',
+			width: '90px', height: 'auto',
 			display: 'block',
 			margin: '0 auto 8px auto'
 		});
@@ -1248,6 +1248,7 @@
 
 	const btn = document.createElement("button");
 	btn.innerHTML = '<span style="font-weight: bold; font-size: 11px; opacity: 0.8; margin-right: 6px;">Reddit Comments Overkill</span><span class="btn-text">Start Deleting</span>';
+	btn.title = 'Reddit Comments Overkill';
 	Object.assign(btn.style, {
 		position: "fixed",
 		bottom: "15px",
