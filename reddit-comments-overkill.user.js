@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Reddit Comments Overkill
 // @namespace    https://github.com/xpufx/reddit-comments-overkill
-// @version      2.42
+// @version      2.43
 // @description  Deletes all comments by cycling sorts reliably, retrying on rate limits, waiting for comments, handling infinite scroll & next page, with Start/Stop control.
 // @downloadURL  https://github.com/xpufx/reddit-comments-overkill/raw/refs/heads/main/reddit-comments-overkill.user.js
 // @updateURL    https://github.com/xpufx/reddit-comments-overkill/raw/refs/heads/main/reddit-comments-overkill.user.js
@@ -50,10 +50,12 @@
 			const logMessage = "[" + SCRIPT_NAME + "] " + message;
 			console.log(logMessage, ...args);
 		}
-		// Stream last log line to overlay when visible (replaces, doesn't append)
+		// Stream logs to overlay (accumulates in fixed-height scrollable area)
 		if (overlayLogEl) {
 			const extra = args.length ? ' ' + args.map(a => typeof a === 'object' ? JSON.stringify(a) : String(a)).join(' ') : '';
-			overlayLogEl.textContent = (message + extra).slice(0, 500); // cap length so it doesn't overflow the box
+			const line = (message + extra).slice(0, 200);
+			overlayLogEl.textContent += (overlayLogEl.textContent ? '\n' : '') + line;
+			overlayLogEl.scrollTop = overlayLogEl.scrollHeight;
 		}
 	}
 
@@ -1098,6 +1100,7 @@
 	function showOverlay() {
 		if (overlayEl) return; // already showing
 		hideBadge();
+		// Clear log area for fresh start
 
 		overlayEl = document.createElement("div");
 		overlayEl.id = 'rco-overlay';
@@ -1162,9 +1165,15 @@
 			fontSize: '12px',
 			color: '#555',
 			marginBottom: '12px',
-			minHeight: '1.2em',
+			height: '120px',
+			overflowY: 'auto',
 			fontFamily: 'monospace',
-			wordBreak: 'break-all'
+			whiteSpace: 'pre-wrap',
+			wordBreak: 'break-all',
+			textAlign: 'left',
+			background: '#f5f5f5',
+			borderRadius: '4px',
+			padding: '6px'
 		});
 		panel.appendChild(overlayLogEl);
 
