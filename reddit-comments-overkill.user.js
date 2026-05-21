@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Reddit Comments Overkill
 // @namespace    https://github.com/xpufx/reddit-comments-overkill
-// @version      2.29
+// @version      2.30
 // @description  Deletes all comments by cycling sorts reliably, retrying on rate limits, waiting for comments, handling infinite scroll & next page, with Start/Stop control.
 // @downloadURL  https://github.com/xpufx/reddit-comments-overkill/raw/refs/heads/main/reddit-comments-overkill.user.js
 // @updateURL    https://github.com/xpufx/reddit-comments-overkill/raw/refs/heads/main/reddit-comments-overkill.user.js
@@ -1084,14 +1084,26 @@
 		overlayStatusEl.textContent = 'Starting...';
 		panel.appendChild(overlayStatusEl);
 
-		const hint = document.createElement("div");
-		hint.textContent = 'Click the "Stop Deleting" button in the corner to cancel.';
-		Object.assign(hint.style, {
-			fontSize: '12px',
-			color: '#888',
-			fontStyle: 'italic'
+		const stopBtn = document.createElement("button");
+		stopBtn.textContent = 'Stop Deleting';
+		Object.assign(stopBtn.style, {
+			padding: '10px 24px',
+			background: '#d00',
+			color: '#fff',
+			border: 'none',
+			borderRadius: '6px',
+			fontSize: '14px',
+			fontWeight: 'bold',
+			cursor: 'pointer',
+			marginTop: '8px'
 		});
-		panel.appendChild(hint);
+		stopBtn.onclick = () => {
+			running = false;
+			updateUrlState(false, '', undefined, preserveDotComments, dryRun);
+			updateButtonState();
+			hideOverlay();
+		};
+		panel.appendChild(stopBtn);
 
 		overlayEl.appendChild(panel);
 		document.body.appendChild(overlayEl);
