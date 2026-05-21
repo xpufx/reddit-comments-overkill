@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Reddit Comments Overkill
 // @namespace    https://github.com/xpufx/reddit-comments-overkill
-// @version      2.32
+// @version      2.33
 // @description  Deletes all comments by cycling sorts reliably, retrying on rate limits, waiting for comments, handling infinite scroll & next page, with Start/Stop control.
 // @downloadURL  https://github.com/xpufx/reddit-comments-overkill/raw/refs/heads/main/reddit-comments-overkill.user.js
 // @updateURL    https://github.com/xpufx/reddit-comments-overkill/raw/refs/heads/main/reddit-comments-overkill.user.js
@@ -855,7 +855,7 @@
 			display: 'block',
 			margin: '0 auto 8px auto'
 		});
-		content.insertBefore(modalLogo, title);
+		content.appendChild(modalLogo);
 		title.style.cssText = "margin-top: 0; margin-bottom: 15px; color: #d00;";
 		content.appendChild(title);
 
