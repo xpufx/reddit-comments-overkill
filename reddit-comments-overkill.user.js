@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Reddit Comments Overkill
 // @namespace    https://github.com/xpufx/reddit-comments-overkill
-// @version      2.36
+// @version      2.37
 // @description  Deletes all comments by cycling sorts reliably, retrying on rate limits, waiting for comments, handling infinite scroll & next page, with Start/Stop control.
 // @downloadURL  https://github.com/xpufx/reddit-comments-overkill/raw/refs/heads/main/reddit-comments-overkill.user.js
 // @updateURL    https://github.com/xpufx/reddit-comments-overkill/raw/refs/heads/main/reddit-comments-overkill.user.js
@@ -1206,7 +1206,7 @@
 	 ************************/
 	const btn = document.createElement("button");
 	const btnLogo = document.createElement("img");
-	btnLogo.src = LOGO_32;
+	btnLogo.src = LOGO_64;
 	btnLogo.alt = '';
 	Object.assign(btnLogo.style, {
 		width: '20px', height: '22px',
