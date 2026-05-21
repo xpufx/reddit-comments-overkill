@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Reddit Comments Overkill
 // @namespace    https://github.com/xpufx/reddit-comments-overkill
-// @version      2.33
+// @version      2.34
 // @description  Deletes all comments by cycling sorts reliably, retrying on rate limits, waiting for comments, handling infinite scroll & next page, with Start/Stop control.
 // @downloadURL  https://github.com/xpufx/reddit-comments-overkill/raw/refs/heads/main/reddit-comments-overkill.user.js
 // @updateURL    https://github.com/xpufx/reddit-comments-overkill/raw/refs/heads/main/reddit-comments-overkill.user.js
@@ -43,6 +43,11 @@
 		if (LOGGING_ENABLED) {
 			const logMessage = "[" + SCRIPT_NAME + "] " + message;
 			console.log(logMessage, ...args);
+		}
+		// Stream last log line to overlay when visible (replaces, doesn't append)
+		if (overlayLogEl) {
+			const extra = args.length ? ' ' + args.map(a => typeof a === 'object' ? JSON.stringify(a) : String(a)).join(' ') : '';
+			overlayLogEl.textContent = (message + extra).slice(0, 200); // cap length
 		}
 	}
 
@@ -1050,6 +1055,7 @@
 	 ************************/
 	let overlayEl = null;
 	let overlayStatusEl = null;
+	let overlayLogEl = null;
 
 	function showOverlay() {
 		if (overlayEl) return; // already showing
@@ -1111,6 +1117,17 @@
 		overlayStatusEl.textContent = 'Starting...';
 		panel.appendChild(overlayStatusEl);
 
+		overlayLogEl = document.createElement("div");
+		Object.assign(overlayLogEl.style, {
+			fontSize: '12px',
+			color: '#555',
+			marginBottom: '12px',
+			minHeight: '1.2em',
+			fontFamily: 'monospace',
+			wordBreak: 'break-all'
+		});
+		panel.appendChild(overlayLogEl);
+
 		const stopBtn = document.createElement("button");
 		stopBtn.textContent = 'Stop Deleting';
 		Object.assign(stopBtn.style, {
@@ -1149,6 +1166,7 @@
 			try { overlayEl.remove(); } catch (e) { /* ignore */ }
 			overlayEl = null;
 			overlayStatusEl = null;
+			overlayLogEl = null;
 		}
 	}
 
