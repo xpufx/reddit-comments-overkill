@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Reddit Comments Overkill
 // @namespace    https://github.com/xpufx/reddit-comments-overkill
-// @version      2.43
+// @version      2.44
 // @description  Deletes all comments by cycling sorts reliably, retrying on rate limits, waiting for comments, handling infinite scroll & next page, with Start/Stop control.
 // @downloadURL  https://github.com/xpufx/reddit-comments-overkill/raw/refs/heads/main/reddit-comments-overkill.user.js
 // @updateURL    https://github.com/xpufx/reddit-comments-overkill/raw/refs/heads/main/reddit-comments-overkill.user.js
@@ -773,7 +773,7 @@
 					running = false;
 					updateUrlState(false, '', undefined, preserveDotComments, dryRun);
 					updateButtonState();
-					hideOverlay();
+					showCompleteOverlay();
 					log("All selected sorts completed, clearing state");
 					break;
 				}
@@ -1178,6 +1178,7 @@
 		panel.appendChild(overlayLogEl);
 
 		const btnRow = document.createElement("div");
+		btnRow.className = 'rco-btn-row';
 		Object.assign(btnRow.style, {
 			display: 'flex',
 			gap: '10px',
@@ -1231,6 +1232,31 @@
 		if (status) html += '<strong>' + escapeHtml(status) + '</strong>';
 		if (detail) html += '<br>' + escapeHtml(detail);
 		overlayStatusEl.innerHTML = html;
+	}
+
+	function showCompleteOverlay() {
+		if (!overlayEl) return;
+		// Update status
+		updateOverlay('Complete!', 'All sorts processed.');
+		// Replace the button row with a single OK button
+		const oldRow = overlayEl.querySelector('.rco-btn-row');
+		if (oldRow) {
+			const okBtn = document.createElement("button");
+			okBtn.textContent = 'OK';
+			Object.assign(okBtn.style, {
+				padding: '10px 40px',
+				background: '#4CAF50',
+				color: '#fff',
+				border: 'none',
+				borderRadius: '6px',
+				fontSize: '16px',
+				fontWeight: 'bold',
+				cursor: 'pointer'
+			});
+			okBtn.onclick = hideOverlay;
+			oldRow.innerHTML = '';
+			oldRow.appendChild(okBtn);
+		}
 	}
 
 	function hideOverlay() {
