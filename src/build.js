@@ -13,4 +13,17 @@ const html = template
 const outDir = path.join(__dirname, '..', 'docs');
 if (!fs.existsSync(outDir)) fs.mkdirSync(outDir, { recursive: true });
 fs.writeFileSync(path.join(outDir, 'index.html'), html);
-console.log('Built docs/index.html');
+
+// Copy images referenced in README so they display on the site
+const images = [
+  'reddit-comments-overkill-web.png',
+  'reddit-comments-overkill-screenshot.png'
+];
+for (const img of images) {
+  const src = path.join(__dirname, '..', img);
+  if (fs.existsSync(src)) {
+    fs.copyFileSync(src, path.join(outDir, img));
+  }
+}
+
+console.log('Built docs/index.html + assets');
