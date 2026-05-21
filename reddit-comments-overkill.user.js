@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Reddit Comments Overkill
 // @namespace    https://github.com/xpufx/reddit-comments-overkill
-// @version      2.38
+// @version      2.39
 // @description  Deletes all comments by cycling sorts reliably, retrying on rate limits, waiting for comments, handling infinite scroll & next page, with Start/Stop control.
 // @downloadURL  https://github.com/xpufx/reddit-comments-overkill/raw/refs/heads/main/reddit-comments-overkill.user.js
 // @updateURL    https://github.com/xpufx/reddit-comments-overkill/raw/refs/heads/main/reddit-comments-overkill.user.js
@@ -1041,6 +1041,7 @@
 				// Ignore errors
 			}
 			running = true;
+			updateButtonState();
 
 			// Calculate starting sort and update URL
 			const currentSort = getCurrentSort();
@@ -1235,24 +1236,103 @@
 	}
 
 	/***********************
-	 * BOOT — show modal or resume
+	 * BUTTON + BOOT
 	 ************************/
 
 	// Guard to prevent multiple concurrent main() loops
 	let mainRunning = false;
 
-	// Check if the script should resume based on URL state
+	function updateButtonDisplay() {
+		btn.style.display = running || !getRunningStateFromUrl() ? 'flex' : 'none';
+	}
+
+	const btn = document.createElement("button");
+	btn.innerHTML = '<span style="font-weight: bold; font-size: 11px; opacity: 0.8; margin-right: 6px;">Reddit Comments Overkill</span><span class="btn-text">Start Deleting</span>';
+	Object.assign(btn.style, {
+		position: "fixed",
+		bottom: "15px",
+		right: "15px",
+		padding: "10px 14px",
+		background: "#ff4500",
+		color: "#fff",
+		border: "none",
+		borderRadius: "6px",
+		fontSize: "14px",
+		cursor: "pointer",
+		zIndex: 999999,
+		display: "flex",
+		alignItems: "center",
+		justifyContent: "center",
+		boxShadow: "0 2px 8px rgba(0,0,0,0.3)",
+		transition: "all 0.2s ease"
+	});
+	document.body.appendChild(btn);
+
+	function updateButtonState() {
+		const btnText = btn.querySelector('.btn-text');
+		if (!btnText) return;
+		if (running) {
+			btnText.textContent = "Stop Deleting";
+			btn.style.background = "#d00";
+			btn.style.boxShadow = "0 2px 8px rgba(208, 0, 0, 0.5)";
+			btn.style.animation = "pulse 1.5s infinite";
+		} else {
+			btnText.textContent = "Start Deleting";
+			btn.style.background = "#ff4500";
+			btn.style.boxShadow = "0 2px 8px rgba(0,0,0,0.3)";
+			btn.style.animation = "none";
+		}
+	}
+
+	// Add CSS for pulsing animation
+	const pulseStyle = document.createElement('style');
+	pulseStyle.textContent = `
+		@keyframes pulse {
+			0% { box-shadow: 0 0 0 0 rgba(208, 0, 0, 0.7); }
+			70% { box-shadow: 0 0 0 6px rgba(208, 0, 0, 0); }
+			100% { box-shadow: 0 0 0 0 rgba(208, 0, 0, 0); }
+		}
+	`;
+	document.head.appendChild(pulseStyle);
+
+	running = getRunningStateFromUrl();
+	updateButtonState();
+	updateButtonDisplay();
+
+	btn.onclick = () => {
+		if (!running) {
+			if (mainRunning) {
+				log("A deletion session is already active, ignoring click");
+				return;
+			}
+			if (getRunningStateFromUrl()) {
+				running = true;
+				updateButtonState();
+				mainRunning = true;
+				showOverlay();
+				updateOverlay('Resuming...', 'Continuing from previous session');
+				main().finally(() => { mainRunning = false; hideOverlay(); });
+			} else {
+				showConfirmationModal();
+			}
+		} else {
+			running = false;
+			updateUrlState(false, '', undefined, preserveDotComments, dryRun);
+			updateButtonState();
+			hideOverlay();
+			hideBadge();
+		}
+	};
+
+	// Auto-start if resuming from URL state
 	if (getRunningStateFromUrl()) {
 		log("Resuming from previous state");
 		running = true;
+		updateButtonState();
 		showOverlay();
 		updateOverlay('Resuming...', 'Continuing from previous session');
 		mainRunning = true;
 		main().finally(() => { mainRunning = false; hideOverlay(); });
-	} else {
-		// Fresh page load — show the confirmation modal immediately
-		log("Page loaded, showing confirmation modal");
-		showConfirmationModal();
 	}
 
 })();
