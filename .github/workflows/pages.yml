@@ -3,7 +3,7 @@ name: Deploy README as site
 on:
   push:
     branches: [main]
-    paths: [README.md, src/template.html]
+    paths: [README.md, src/template.html, src/build.js, .github/workflows/pages.yml]
   workflow_dispatch:
 
 jobs:
@@ -15,16 +15,16 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Convert README to HTML
-        uses: docker://pandoc/core:3.6
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
         with:
-          args: >-
-            README.md
-            --template=src/template.html
-            --metadata title="Reddit Comments Overkill"
-            -f gfm
-            -t html5
-            -o docs/index.html
+          node-version: 22
+
+      - name: Install dependencies
+        run: npm install marked
+
+      - name: Build site
+        run: node src/build.js
 
       - name: Setup Pages
         uses: actions/configure-pages@v5
