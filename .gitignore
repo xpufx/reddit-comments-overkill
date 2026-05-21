@@ -1,0 +1,6 @@
+# Local dev notes — not for the repo
+AGENTS.md
+
+# Temp files (audit reports, generated assets)
+/temp/
+/reddit-logo-*.png
