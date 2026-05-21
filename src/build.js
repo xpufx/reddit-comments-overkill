@@ -7,6 +7,9 @@ const template = fs.readFileSync(path.join(__dirname, 'template.html'), 'utf-8')
 
 let body = marked.parse(readme, { gfm: true });
 
+// Strip the H1 (title is in the nav bar), keep the logo
+body = body.replace(/<h1[^>]*>.*?<\/h1>\s*/, '');
+
 const html = template
   .replace('$title$', 'Reddit Comments Overkill')
   .replace('$body$', body);
