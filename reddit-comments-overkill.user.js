@@ -1064,6 +1064,19 @@
 			boxShadow: '0 4px 20px rgba(0,0,0,0.3)'
 		});
 
+		const logo = document.createElement("img");
+		logo.src = 'https://github.com/xpufx/reddit-comments-overkill/raw/refs/heads/main/reddit-comments-overkill-web.png';
+		logo.alt = 'Reddit Comments Overkill';
+		Object.assign(logo.style, {
+			width: '120px',
+			height: 'auto',
+			marginBottom: '10px',
+			display: 'block',
+			marginLeft: 'auto',
+			marginRight: 'auto'
+		});
+		panel.appendChild(logo);
+
 		const title = document.createElement("div");
 		title.textContent = 'Reddit Comments Overkill';
 		Object.assign(title.style, {
