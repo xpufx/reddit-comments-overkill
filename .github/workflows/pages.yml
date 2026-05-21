@@ -1,0 +1,39 @@
+name: Deploy README as site
+
+on:
+  push:
+    branches: [main]
+    paths: [README.md]
+  workflow_dispatch:
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    permissions:
+      pages: write
+      id-token: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Convert README to HTML
+        uses: docker://pandoc/core:3.6
+        with:
+          args: >-
+            README.md
+            --template=src/template.html
+            --metadata title="Reddit Comments Overkill"
+            -f gfm
+            -t html5
+            -o docs/index.html
+
+      - name: Setup Pages
+        uses: actions/configure-pages@v5
+
+      - name: Upload artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: docs/
+
+      - name: Deploy to Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
