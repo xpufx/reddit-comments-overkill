@@ -5,7 +5,13 @@ const { marked } = require('marked');
 const readme = fs.readFileSync(path.join(__dirname, '..', 'README.md'), 'utf-8');
 const template = fs.readFileSync(path.join(__dirname, 'template.html'), 'utf-8');
 
-const body = marked.parse(readme, { gfm: true });
+let body = marked.parse(readme, { gfm: true });
+
+// Strip the first H1 (title is in the nav bar now)
+body = body.replace(/<h1[^>]*>.*?<\/h1>\s*/, '');
+// Strip the logo image paragraph (also in the nav bar)
+body = body.replace(/<p\s+align="center">\s*<img\s+src="\.\/reddit-comments-overkill-web\.png[^>]*>\s*<\/p>\s*/, '');
+
 const html = template
   .replace('$title$', 'Reddit Comments Overkill')
   .replace('$body$', body);
