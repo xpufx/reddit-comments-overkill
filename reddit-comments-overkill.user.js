@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Reddit Comments Overkill
 // @namespace    https://github.com/xpufx/reddit-comments-overkill
-// @version      2.44
+// @version      2.45
 // @description  Deletes all comments by cycling sorts reliably, retrying on rate limits, waiting for comments, handling infinite scroll & next page, with Start/Stop control.
 // @downloadURL  https://github.com/xpufx/reddit-comments-overkill/raw/refs/heads/main/reddit-comments-overkill.user.js
 // @updateURL    https://github.com/xpufx/reddit-comments-overkill/raw/refs/heads/main/reddit-comments-overkill.user.js
@@ -1057,7 +1057,7 @@
 			showOverlay();
 			updateOverlay('Starting...', 'Processing all 4 sort types');
 			mainRunning = true;
-			main(true).finally(() => { mainRunning = false; hideOverlay(); }); // true = fresh start — process ALL 4 sorts
+			main(true).finally(() => { mainRunning = false; if (running) hideOverlay(); }); // true = fresh start — process ALL 4 sorts
 		};
 	}
 
@@ -1236,27 +1236,34 @@
 
 	function showCompleteOverlay() {
 		if (!overlayEl) return;
-		// Update status
-		updateOverlay('Complete!', 'All sorts processed.');
+		// Change overlay background to green-tinted to signal completion
+		overlayEl.style.background = 'rgba(0,80,0,0.6)';
+		// Update status prominently
+		const statusEl = overlayStatusEl;
+		if (statusEl) {
+			statusEl.innerHTML = '<span style="font-size:28px;color:#2e7d32">&#10003;</span><br><strong style="font-size:22px;color:#2e7d32">Complete!</strong><br><span style="font-size:14px;color:#555">All 4 sorts processed. Your comments have been deleted according to your settings.</span>';
+		}
 		// Replace the button row with a single OK button
 		const oldRow = overlayEl.querySelector('.rco-btn-row');
 		if (oldRow) {
+			oldRow.innerHTML = '';
 			const okBtn = document.createElement("button");
 			okBtn.textContent = 'OK';
 			Object.assign(okBtn.style, {
-				padding: '10px 40px',
-				background: '#4CAF50',
+				padding: '12px 60px',
+				background: '#2e7d32',
 				color: '#fff',
 				border: 'none',
-				borderRadius: '6px',
-				fontSize: '16px',
+				borderRadius: '8px',
+				fontSize: '18px',
 				fontWeight: 'bold',
-				cursor: 'pointer'
+				cursor: 'pointer',
+				boxShadow: '0 2px 8px rgba(0,0,0,0.2)'
 			});
 			okBtn.onclick = hideOverlay;
-			oldRow.innerHTML = '';
 			oldRow.appendChild(okBtn);
 		}
+		// Hide the Close button row if it exists (we already replaced it)
 	}
 
 	function hideOverlay() {
@@ -1353,7 +1360,7 @@
 				mainRunning = true;
 				showOverlay();
 				updateOverlay('Resuming...', 'Continuing from previous session');
-				main().finally(() => { mainRunning = false; hideOverlay(); });
+				main().finally(() => { mainRunning = false; if (running) hideOverlay(); });
 			} else {
 				showConfirmationModal();
 			}
@@ -1374,7 +1381,7 @@
 		showOverlay();
 		updateOverlay('Resuming...', 'Continuing from previous session');
 		mainRunning = true;
-		main().finally(() => { mainRunning = false; hideOverlay(); });
+		main().finally(() => { mainRunning = false; if (running) hideOverlay(); });
 	}
 
 })();
