@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Reddit Comments Overkill
 // @namespace    https://github.com/xpufx/reddit-comments-overkill
-// @version      2.37
+// @version      2.38
 // @description  Deletes all comments by cycling sorts reliably, retrying on rate limits, waiting for comments, handling infinite scroll & next page, with Start/Stop control.
 // @downloadURL  https://github.com/xpufx/reddit-comments-overkill/raw/refs/heads/main/reddit-comments-overkill.user.js
 // @updateURL    https://github.com/xpufx/reddit-comments-overkill/raw/refs/heads/main/reddit-comments-overkill.user.js
@@ -53,7 +53,7 @@
 		// Stream last log line to overlay when visible (replaces, doesn't append)
 		if (overlayLogEl) {
 			const extra = args.length ? ' ' + args.map(a => typeof a === 'object' ? JSON.stringify(a) : String(a)).join(' ') : '';
-			overlayLogEl.textContent = (message + extra).slice(0, 200); // cap length
+			overlayLogEl.textContent = (message + extra).slice(0, 500); // cap length so it doesn't overflow the box
 		}
 	}
 
@@ -769,9 +769,7 @@
 				if (idx >= activeSorts.length) {
 					log("ALL SELECTED SORTS PROCESSED — no more comments.");
 					running = false;
-					// Update status and button state when all sorts are complete
 					updateUrlState(false, '', undefined, preserveDotComments, dryRun);
-					updateButtonState();
 					hideOverlay();
 					log("All selected sorts completed, clearing state");
 					break;
@@ -1043,7 +1041,6 @@
 				// Ignore errors
 			}
 			running = true;
-			updateButtonState();
 
 			// Calculate starting sort and update URL
 			const currentSort = getCurrentSort();
@@ -1059,8 +1056,42 @@
 	/***********************
 	 * OVERLAY — covers the page while script is running
 	 ************************/
+	// RCO badge — appears when overlay is closed but script is running
+	let badgeEl = null;
+
+	function showBadge() {
+		if (badgeEl) return;
+		badgeEl = document.createElement("div");
+		badgeEl.textContent = 'RCO';
+		Object.assign(badgeEl.style, {
+			position: 'fixed',
+			bottom: '15px', right: '15px',
+			padding: '6px 10px',
+			background: '#d00',
+			color: '#fff',
+			borderRadius: '4px',
+			fontSize: '12px',
+			fontWeight: 'bold',
+			cursor: 'pointer',
+			zIndex: 999999,
+			boxShadow: '0 2px 6px rgba(0,0,0,0.3)',
+			userSelect: 'none'
+		});
+		badgeEl.onclick = showOverlay;
+		badgeEl.title = 'Click to open RCO overlay';
+		document.body.appendChild(badgeEl);
+	}
+
+	function hideBadge() {
+		if (badgeEl) {
+			try { badgeEl.remove(); } catch (e) { /* ignore */ }
+			badgeEl = null;
+		}
+	}
+
 	function showOverlay() {
 		if (overlayEl) return; // already showing
+		hideBadge();
 
 		overlayEl = document.createElement("div");
 		overlayEl.id = 'rco-overlay';
@@ -1166,8 +1197,8 @@
 		stopBtn.onclick = () => {
 			running = false;
 			updateUrlState(false, '', undefined, preserveDotComments, dryRun);
-			updateButtonState();
 			hideOverlay();
+			hideBadge();
 		};
 
 		btnRow.appendChild(cancelBtn);
@@ -1193,6 +1224,8 @@
 			overlayStatusEl = null;
 			overlayLogEl = null;
 		}
+		// Show badge if the script is still running so user can get back to the overlay
+		if (running) showBadge();
 	}
 
 	function escapeHtml(str) {
@@ -1202,118 +1235,24 @@
 	}
 
 	/***********************
-	 * BUTTON
+	 * BOOT — show modal or resume
 	 ************************/
-	const btn = document.createElement("button");
-	const btnLogo = document.createElement("img");
-	btnLogo.src = LOGO_64;
-	btnLogo.alt = '';
-	Object.assign(btnLogo.style, {
-		width: '20px', height: '22px',
-		marginRight: '6px', verticalAlign: 'middle'
-	});
-	const btnSpan = document.createElement("span");
-	btnSpan.style.cssText = 'font-weight: bold; font-size: 11px; opacity: 0.8; margin-right: 6px;';
-	btnSpan.textContent = 'Reddit Comments Overkill';
-	const btnText = document.createElement("span");
-	btnText.className = 'btn-text';
-	btnText.textContent = 'Start Deleting';
-	btn.appendChild(btnLogo);
-	btn.appendChild(btnSpan);
-	btn.appendChild(btnText);
-	Object.assign(btn.style, {
-		position: "fixed",
-		bottom: "15px",
-		right: "15px",
-		padding: "10px 14px",
-		background: "#ff4500",
-		color: "#fff",
-		border: "none",
-		borderRadius: "6px",
-		fontSize: "14px",
-		cursor: "pointer",
-		zIndex: 999999,
-		display: "flex",
-		alignItems: "center",
-		justifyContent: "center",
-		boxShadow: "0 2px 8px rgba(0,0,0,0.3)",
-		transition: "all 0.2s ease"
-	});
-	document.body.appendChild(btn);
-
-	// Update button visual state
-	function updateButtonState() {
-		const btnText = btn.querySelector('.btn-text');
-		if (!btnText) return;
-		if (running) {
-			btnText.textContent = "Stop Deleting";
-			btn.style.background = "#d00";
-			btn.style.boxShadow = "0 2px 8px rgba(208, 0, 0, 0.5)";
-			// Add pulsing animation when running
-			btn.style.animation = "pulse 1.5s infinite";
-		} else {
-			btnText.textContent = "Start Deleting";
-			btn.style.background = "#ff4500";
-			btn.style.boxShadow = "0 2px 8px rgba(0,0,0,0.3)";
-			btn.style.animation = "none";
-		}
-	}
-
-	// Add CSS for pulsing animation
-	const style = document.createElement('style');
-	style.textContent = `
-		@keyframes pulse {
-			0% { box-shadow: 0 0 0 0 rgba(208, 0, 0, 0.7); }
-			70% { box-shadow: 0 0 0 6px rgba(208, 0, 0, 0); }
-			100% { box-shadow: 0 0 0 0 rgba(208, 0, 0, 0); }
-		}
-	`;
-	document.head.appendChild(style);
-
-	// Set initial button state based on URL running state
-	running = getRunningStateFromUrl();
-	updateButtonState();
 
 	// Guard to prevent multiple concurrent main() loops
 	let mainRunning = false;
 
-	btn.onclick = () => {
-		if (!running) {
-			// Prevent starting another main() instance if one is still active
-			if (mainRunning) {
-				log("A deletion session is already active, ignoring click");
-				return;
-			}
-			// Starting fresh - check if we need confirmation
-			if (getRunningStateFromUrl()) {
-				// Already has rco_sort parameter - resume without confirmation
-				running = true;
-				updateButtonState();
-				mainRunning = true;
-				main().finally(() => { mainRunning = false; });
-			} else {
-				// Fresh start - show confirmation modal
-				showConfirmationModal();
-			}
-		} else {
-			// Stopping
-			running = false;
-			updateUrlState(false, '', undefined, preserveDotComments, dryRun);
-			updateButtonState();
-			hideOverlay();
-		}
-	};
-
-	// Check if the script should start automatically based on URL state
+	// Check if the script should resume based on URL state
 	if (getRunningStateFromUrl()) {
 		log("Resuming from previous state");
-		running = true; // Ensure running is true when resuming
-		// Update button to reflect running status
-		updateButtonState();
+		running = true;
 		showOverlay();
 		updateOverlay('Resuming...', 'Continuing from previous session');
 		mainRunning = true;
 		main().finally(() => { mainRunning = false; hideOverlay(); });
+	} else {
+		// Fresh page load — show the confirmation modal immediately
+		log("Page loaded, showing confirmation modal");
+		showConfirmationModal();
 	}
 
 })();
