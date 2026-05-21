@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Reddit Comments Overkill
 // @namespace    https://github.com/xpufx/reddit-comments-overkill
-// @version      2.28
+// @version      2.29
 // @description  Deletes all comments by cycling sorts reliably, retrying on rate limits, waiting for comments, handling infinite scroll & next page, with Start/Stop control.
 // @downloadURL  https://github.com/xpufx/reddit-comments-overkill/raw/refs/heads/main/reddit-comments-overkill.user.js
 // @updateURL    https://github.com/xpufx/reddit-comments-overkill/raw/refs/heads/main/reddit-comments-overkill.user.js
@@ -574,7 +574,7 @@
 		} else {
 			log("Found", deletes.length, "comments to delete");
 		}
-		// Update status with number of comments found
+		updateOverlay(getCurrentSort() + ' sort', deletes.length + ' comments found');
 
 		let deleted = 0;
 		// Generate the initial pause target once (not per iteration like before)
@@ -589,13 +589,14 @@
 			const success = await deleteComment(btn);
 			if (success) {
 				deleted++;
-				// Update status with number of deleted comments
+				updateOverlay(getCurrentSort() + ' sort', deleted + ' / ' + deletes.length + ' comments processed');
 			}
 
 			// periodic long pause to avoid rate limit
 			if (deleted >= nextPauseTarget) {
 				const p = rand(LONG_DELAY_MS[0], LONG_DELAY_MS[1]);
 				log("Long pause after", deleted, "deletions, waiting", p / 1000, "seconds");
+				updateOverlay(getCurrentSort() + ' sort', 'Rate limit pause... (' + (p / 1000).toFixed(0) + 's)');
 				await sleep(p);
 				// Set next pause target: another random interval from the current count
 				nextPauseTarget = deleted + rand(LONG_DELAY_AFTER[0], LONG_DELAY_AFTER[1]);
@@ -756,14 +757,16 @@
 					// Update status and button state when all sorts are complete
 					updateUrlState(false, '', undefined, preserveDotComments, dryRun);
 					updateButtonState();
+					hideOverlay();
 					log("All selected sorts completed, clearing state");
 					break;
 				}
 
 				const sort = activeSorts[idx];
 
-				log("Processing sort: " + sort + " at index: " + idx);
-				const finished = await runSort(sort);
+		log("Processing sort: " + sort + " at index: " + idx);
+			updateOverlay('Processing ' + sort + ' sort', 'Searching for comments...');
+			const finished = await runSort(sort);
 				if (!running) break;
 
 				if (finished) {
@@ -1021,9 +1024,99 @@
 			const currentSort = getCurrentSort();
 			updateUrlState(running, currentSort, daysToPreserve, preserveDotComments, dryRun);
 
+			showOverlay();
+			updateOverlay('Starting...', 'Processing all 4 sort types');
 			mainRunning = true;
-			main(true).finally(() => { mainRunning = false; }); // true = fresh start — process ALL 4 sorts
+			main(true).finally(() => { mainRunning = false; hideOverlay(); }); // true = fresh start — process ALL 4 sorts
 		};
+	}
+
+	/***********************
+	 * OVERLAY — covers the page while script is running
+	 ************************/
+	let overlayEl = null;
+	let overlayStatusEl = null;
+
+	function showOverlay() {
+		if (overlayEl) return; // already showing
+
+		overlayEl = document.createElement("div");
+		overlayEl.id = 'rco-overlay';
+		Object.assign(overlayEl.style, {
+			position: 'fixed',
+			top: '0', left: '0', width: '100%', height: '100%',
+			background: 'rgba(0,0,0,0.55)',
+			zIndex: '999998',
+			display: 'flex',
+			flexDirection: 'column',
+			alignItems: 'center',
+			justifyContent: 'center',
+			fontFamily: 'Arial, sans-serif'
+		});
+
+		const panel = document.createElement("div");
+		Object.assign(panel.style, {
+			background: '#fff',
+			borderRadius: '10px',
+			padding: '30px 40px',
+			maxWidth: '500px',
+			textAlign: 'center',
+			boxShadow: '0 4px 20px rgba(0,0,0,0.3)'
+		});
+
+		const title = document.createElement("div");
+		title.textContent = 'Reddit Comments Overkill';
+		Object.assign(title.style, {
+			fontSize: '20px',
+			fontWeight: 'bold',
+			color: '#d00',
+			marginBottom: '12px'
+		});
+		panel.appendChild(title);
+
+		overlayStatusEl = document.createElement("div");
+		Object.assign(overlayStatusEl.style, {
+			fontSize: '14px',
+			color: '#333',
+			marginBottom: '20px',
+			lineHeight: '1.5'
+		});
+		overlayStatusEl.textContent = 'Starting...';
+		panel.appendChild(overlayStatusEl);
+
+		const hint = document.createElement("div");
+		hint.textContent = 'Click the "Stop Deleting" button in the corner to cancel.';
+		Object.assign(hint.style, {
+			fontSize: '12px',
+			color: '#888',
+			fontStyle: 'italic'
+		});
+		panel.appendChild(hint);
+
+		overlayEl.appendChild(panel);
+		document.body.appendChild(overlayEl);
+	}
+
+	function updateOverlay(status, detail) {
+		if (!overlayStatusEl) return;
+		let html = '';
+		if (status) html += '<strong>' + escapeHtml(status) + '</strong>';
+		if (detail) html += '<br>' + escapeHtml(detail);
+		overlayStatusEl.innerHTML = html;
+	}
+
+	function hideOverlay() {
+		if (overlayEl) {
+			try { overlayEl.remove(); } catch (e) { /* ignore */ }
+			overlayEl = null;
+			overlayStatusEl = null;
+		}
+	}
+
+	function escapeHtml(str) {
+		const d = document.createElement('div');
+		d.textContent = str;
+		return d.innerHTML;
 	}
 
 	/***********************
@@ -1114,6 +1207,7 @@
 			running = false;
 			updateUrlState(false, '', undefined, preserveDotComments, dryRun);
 			updateButtonState();
+			hideOverlay();
 		}
 	};
 
@@ -1123,8 +1217,10 @@
 		running = true; // Ensure running is true when resuming
 		// Update button to reflect running status
 		updateButtonState();
+		showOverlay();
+		updateOverlay('Resuming...', 'Continuing from previous session');
 		mainRunning = true;
-		main().finally(() => { mainRunning = false; });
+		main().finally(() => { mainRunning = false; hideOverlay(); });
 	}
 
 })();
