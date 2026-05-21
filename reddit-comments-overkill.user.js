@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Reddit Comments Overkill
 // @namespace    https://github.com/xpufx/reddit-comments-overkill
-// @version      2.40
+// @version      2.42
 // @description  Deletes all comments by cycling sorts reliably, retrying on rate limits, waiting for comments, handling infinite scroll & next page, with Start/Stop control.
 // @downloadURL  https://github.com/xpufx/reddit-comments-overkill/raw/refs/heads/main/reddit-comments-overkill.user.js
 // @updateURL    https://github.com/xpufx/reddit-comments-overkill/raw/refs/heads/main/reddit-comments-overkill.user.js
@@ -770,6 +770,7 @@
 					log("ALL SELECTED SORTS PROCESSED — no more comments.");
 					running = false;
 					updateUrlState(false, '', undefined, preserveDotComments, dryRun);
+					updateButtonState();
 					hideOverlay();
 					log("All selected sorts completed, clearing state");
 					break;
@@ -870,7 +871,7 @@
 
 		const warning = document.createElement("p");
 		const modeText = simulate ? "SIMULATION MODE — comments will NOT be deleted" : "Comments WILL be permanently deleted";
-		warning.innerHTML = `[${modeText}]<br><br>This will process all your Reddit comments across all sort types (new, hot, top, controversial). Comments from the last <span id='days-display'>${daysToPreserve}</span> days will be preserved. You can also preserve comments ending with a dot (.) on their own line.`;
+		warning.innerHTML = `<span id="rco-mode-text">[${modeText}]</span><br><br>This will process all your Reddit comments across all sort types (new, hot, top, controversial). Comments from the last <span id='days-display'>${daysToPreserve}</span> days will be preserved. You can also preserve comments ending with a dot (.) on their own line.`;
 		warning.style.cssText = "margin-bottom: 10px; line-height: 1.4;";
 		content.appendChild(warning);
 
@@ -979,6 +980,10 @@
 		simCheckbox.addEventListener('change', () => {
 			simulate = simCheckbox.checked;
 			log("Simulation mode changed to:", simulate);
+			const modeSpan = document.getElementById('rco-mode-text');
+			if (modeSpan) {
+				modeSpan.textContent = simulate ? "SIMULATION MODE — comments will NOT be deleted" : "Comments WILL be permanently deleted";
+			}
 		});
 
 		const note = document.createElement("p");
@@ -1113,7 +1118,8 @@
 			background: '#fff',
 			borderRadius: '10px',
 			padding: '30px 40px',
-			maxWidth: '500px',
+			width: '420px',
+			minHeight: '300px',
 			textAlign: 'center',
 			boxShadow: '0 4px 20px rgba(0,0,0,0.3)'
 		});
@@ -1247,7 +1253,7 @@
 	}
 
 	const btn = document.createElement("button");
-	btn.innerHTML = '<span style="font-weight: bold; font-size: 11px; opacity: 0.8; margin-right: 6px;">Reddit Comments Overkill</span><span class="btn-text">Start Deleting</span>';
+	btn.innerHTML = '<img src="' + LOGO_64 + '" style="width:20px;height:22px;margin-right:6px;vertical-align:middle" alt=""><span style="font-weight: bold; font-size: 11px; opacity: 0.8; margin-right: 6px;">Reddit Comments Overkill</span><span class="btn-text">Start Deleting</span>';
 	btn.title = 'Reddit Comments Overkill';
 	Object.assign(btn.style, {
 		position: "fixed",
