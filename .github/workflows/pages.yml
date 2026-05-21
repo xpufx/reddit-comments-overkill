@@ -3,7 +3,7 @@ name: Deploy README as site
 on:
   push:
     branches: [main]
-    paths: [README.md]
+    paths: [README.md, src/template.html]
   workflow_dispatch:
 
 jobs:
