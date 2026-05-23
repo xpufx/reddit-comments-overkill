@@ -3,6 +3,12 @@ set -euo pipefail
 
 SCRIPT="reddit-comments-overkill.user.js"
 README="README.md"
+NO_BLOCK=0
+for arg in "$@"; do
+	case "$arg" in
+	--no-block | -y) NO_BLOCK=1 ;;
+	esac
+done
 
 echo "=== Release check ==="
 
@@ -18,13 +24,6 @@ if [ "$meta_ver" != "$const_ver" ]; then
 	exit 1
 fi
 
-# 2. Check README has the version somewhere
-if grep -q "$meta_ver" "$README" 2>/dev/null; then
-	echo "  README mentions version: yes"
-else
-	echo "  WARNING: README does not mention version $meta_ver"
-fi
-
 # 3. Check for uncommitted changes
 if ! git diff --quiet HEAD; then
 	echo "  WARNING: Uncommitted changes exist"
@@ -35,6 +34,14 @@ fi
 if git tag -l "v$meta_ver" | grep -q .; then
 	echo "  ERROR: Tag v$meta_ver already exists"
 	exit 1
+fi
+
+echo
+echo "Reminder: update README if new features were added."
+echo "Tip: use --no-block to skip this prompt next time."
+if [ "$NO_BLOCK" -eq 0 ]; then
+	echo "Press Enter to continue or Ctrl+C to abort..."
+	read -r
 fi
 
 echo
