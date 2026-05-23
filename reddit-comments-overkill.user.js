@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Reddit Comments Overkill
 // @namespace    https://github.com/xpufx/reddit-comments-overkill
-// @version      2.45
+// @version      2.46
 // @description  Deletes all comments by cycling sorts reliably, retrying on rate limits, waiting for comments, handling infinite scroll & next page, with Start/Stop control.
 // @downloadURL  https://github.com/xpufx/reddit-comments-overkill/raw/refs/heads/main/reddit-comments-overkill.user.js
 // @updateURL    https://github.com/xpufx/reddit-comments-overkill/raw/refs/heads/main/reddit-comments-overkill.user.js
@@ -21,6 +21,7 @@
 	 * CONFIG
 	 ************************/
 	const SCRIPT_NAME = "Reddit Comments Overkill";
+	const VERSION = "2.46";
 	const LOGGING_ENABLED = true; // Set to false to disable console logging
 	const SORTS = ["new", "hot", "top", "controversial"];
 	const WAIT_FOR_COMMENTS_MS = 8000;
@@ -31,6 +32,7 @@
 	const LONG_DELAY_MS = [10000, 15000];
 	let daysToPreserve = 10; // Keep comments from the last N days (set to 0 to delete all comments regardless of age)
 	let preserveDotComments = true; // Preserve comments that end with a dot (.) on its own line
+	let xMeansDelete = true; // Comments ending with x on its own line are force-deleted regardless of age
 	let dryRun = false; // Dry run mode: log actions without actually deleting
 	let simulate = true; // Simulation mode: click "No" on confirmation instead of "Yes" — safe for debugging
 
@@ -97,6 +99,15 @@
 		return true; // default
 	}
 
+	function getXMeansDeleteFromUrl() {
+		const urlParams = new URLSearchParams(window.location.search);
+		const xParam = urlParams.get('rco_x');
+		if (xParam !== null) {
+			return xParam === 'true';
+		}
+		return true; // default
+	}
+
 	function getDryRunFromUrl() {
 		const urlParams = new URLSearchParams(window.location.search);
 		const dryRunParam = urlParams.get('rco_dryrun');
@@ -115,7 +126,7 @@
 		return true; // default to safe simulation mode
 	}
 
-	function updateUrlState(isRunning, sortName, daysToPreserve, preserveDotComments, dryRun) {
+	function updateUrlState(isRunning, sortName, daysToPreserve, preserveDotComments, xMeansDelete, dryRun) {
 		const urlParams = new URLSearchParams(window.location.search);
 
 		if (isRunning && sortName) {
@@ -129,6 +140,10 @@
 			if (preserveDotComments !== undefined) {
 				urlParams.set('rco_dot', preserveDotComments.toString());
 			}
+			// Set rco_x parameter if provided
+			if (xMeansDelete !== undefined) {
+				urlParams.set('rco_x', xMeansDelete.toString());
+			}
 			// Set rco_dryrun parameter if provided
 			if (dryRun !== undefined) {
 				urlParams.set('rco_dryrun', dryRun.toString());
@@ -140,6 +155,7 @@
 			urlParams.delete('rco_sort');
 			urlParams.delete('rco_days');
 			urlParams.delete('rco_dot');
+			urlParams.delete('rco_x');
 			urlParams.delete('rco_dryrun');
 			urlParams.delete('rco_simulate');
 		}
@@ -153,6 +169,7 @@
 	let running = getRunningStateFromUrl();
 	daysToPreserve = getDaysFromUrl();
 	preserveDotComments = getDotPreservationFromUrl();
+	xMeansDelete = getXMeansDeleteFromUrl();
 	dryRun = getDryRunFromUrl();
 	simulate = getSimulateFromUrl();
 
@@ -162,6 +179,7 @@
 	log("Current sort from URL:", getSortFromUrl());
 	log("Days to preserve from URL:", daysToPreserve);
 	log("Preserve dot comments from URL:", preserveDotComments);
+	log("X means delete from URL:", xMeansDelete);
 	log("Dry run mode from URL:", dryRun);
 	log("Simulate mode from URL:", simulate);
 
@@ -416,6 +434,44 @@
 		}
 	}
 
+	function shouldDeleteCommentByX(commentElement) {
+		if (!xMeansDelete) return false;
+
+		try {
+			const body = commentElement.querySelector('.usertext-body');
+			const md = body || commentElement.querySelector('.md');
+			if (!md) {
+				log('shouldDeleteCommentByX: No .md found, not force-deleting');
+				return false;
+			}
+
+			let raw = md.innerText || md.textContent || '';
+			if (!raw.trim()) {
+				log('shouldDeleteCommentByX: Empty comment text, not force-deleting');
+				return false;
+			}
+
+			raw = raw.replace(/\r\n?/g, '\n');
+			const lines = raw.split('\n')
+				.map(l => l.replace(/[\s\u00A0\u2000-\u200A\u202F\u205F\u3000]+/g, ''))
+				.filter(l => l.length > 0);
+			if (!lines.length) {
+				log('shouldDeleteCommentByX: No non-empty lines after cleaning, not force-deleting');
+				return false;
+			}
+
+			if (lines[lines.length - 1] === 'x') {
+				log('shouldDeleteCommentByX: Force-deleting comment ending with x');
+				return true;
+			}
+
+			return false;
+		} catch (e) {
+			log('shouldDeleteCommentByX: Error:', e);
+			return false;
+		}
+	}
+
 	/***********************
 	 * COMMENT DETECTION
 	 ************************/
@@ -432,13 +488,16 @@
 					return true; // If we can't find the comment element, include the button
 				}
 
-				// Check if this comment should be skipped based on date or dot preservation
+				// Check if this comment should be skipped based on date, dot preservation, or x force-delete
 				const skipByDate = shouldSkipCommentByDate(commentElement);
 				const skipByDot = shouldSkipCommentByDot(commentElement);
-				const shouldSkip = skipByDate || skipByDot;
+				const forceDeleteByX = shouldDeleteCommentByX(commentElement);
+				const shouldSkip = skipByDot || (skipByDate && !forceDeleteByX);
 
 				if (shouldSkip) {
-					log(`getDeleteButtons: Skipping comment (date: ${skipByDate}, dot: ${skipByDot})`);
+					log(`getDeleteButtons: Skipping comment (date: ${skipByDate}, dot: ${skipByDot}, x-override: ${forceDeleteByX})`);
+				} else if (forceDeleteByX) {
+					log(`getDeleteButtons: Including comment via x-override despite age`);
 				}
 
 				return !shouldSkip;
@@ -771,9 +830,9 @@
 				if (idx >= activeSorts.length) {
 					log("ALL SELECTED SORTS PROCESSED — no more comments.");
 					running = false;
-					updateUrlState(false, '', undefined, preserveDotComments, dryRun);
-					updateButtonState();
-					showCompleteOverlay();
+					updateUrlState(false, '', undefined, preserveDotComments, xMeansDelete, dryRun);
+			updateButtonState();
+			showCompleteOverlay();
 					log("All selected sorts completed, clearing state");
 					break;
 				}
@@ -795,7 +854,7 @@
 					if (idx < activeSorts.length) {
 						nextSort = activeSorts[idx];
 					}
-					updateUrlState(running, nextSort, daysToPreserve, preserveDotComments, dryRun);
+					updateUrlState(running, nextSort, daysToPreserve, preserveDotComments, xMeansDelete, dryRun);
 					log("Updated URL state - running: " + running + ", next sort: " + nextSort);
 					// Update progress in status display
 				}
@@ -857,7 +916,7 @@
 		`;
 
 		const title = document.createElement("h3");
-		title.textContent = "⚠️ Confirm Bulk Comment Deletion";
+		title.textContent = "⚠️ Confirm Bulk Comment Deletion  (v" + VERSION + ")";
 		// Modal logo
 		const modalLogo = document.createElement("img");
 		modalLogo.src = LOGO_120;
@@ -873,7 +932,7 @@
 
 		const warning = document.createElement("p");
 		const modeText = simulate ? "SIMULATION MODE — comments will NOT be deleted" : "Comments WILL be permanently deleted";
-		warning.innerHTML = `<span id="rco-mode-text">[${modeText}]</span><br><br>This will process all your Reddit comments across all sort types (new, hot, top, controversial). Comments from the last <span id='days-display'>${daysToPreserve}</span> days will be preserved. You can also preserve comments ending with a dot (.) on their own line.`;
+		warning.innerHTML = `<span id="rco-mode-text">[${modeText}]</span><br><br>This will process all your Reddit comments across all sort types (new, hot, top, controversial). Comments from the last <span id='days-display'>${daysToPreserve}</span> days will be preserved. You can also preserve comments ending with a dot (.) on their own line, or force-delete comments ending with x on their own line.`;
 		warning.style.cssText = "margin-bottom: 10px; line-height: 1.4;";
 		content.appendChild(warning);
 
@@ -988,6 +1047,30 @@
 			}
 		});
 
+		// x-means-delete checkbox
+		const xContainer = document.createElement("div");
+		xContainer.style.cssText = "margin-bottom: 20px; display: flex; align-items: center; gap: 10px;";
+
+		const xCheckbox = document.createElement("input");
+		xCheckbox.type = "checkbox";
+		xCheckbox.id = "x-means-delete";
+		xCheckbox.checked = xMeansDelete;
+		xCheckbox.style.cssText = "width: 18px; height: 18px;";
+
+		const xLabel = document.createElement("label");
+		xLabel.htmlFor = "x-means-delete";
+		xLabel.textContent = "Force-delete comments ending with x on their own line";
+		xLabel.style.cssText = "font-weight: bold; cursor: pointer;";
+
+		xContainer.appendChild(xCheckbox);
+		xContainer.appendChild(xLabel);
+		content.appendChild(xContainer);
+
+		xCheckbox.addEventListener('change', () => {
+			xMeansDelete = xCheckbox.checked;
+			log("X-means-delete setting changed to:", xMeansDelete);
+		});
+
 		const note = document.createElement("p");
 		note.textContent = "Starting from current sort: " + getCurrentSort();
 		note.style.cssText = "margin-bottom: 20px; font-style: italic;";
@@ -1052,7 +1135,7 @@
 
 			// Calculate starting sort and update URL
 			const currentSort = getCurrentSort();
-			updateUrlState(running, currentSort, daysToPreserve, preserveDotComments, dryRun);
+			updateUrlState(running, currentSort, daysToPreserve, preserveDotComments, xMeansDelete, dryRun);
 
 			showOverlay();
 			updateOverlay('Starting...', 'Processing all 4 sort types');
@@ -1141,7 +1224,7 @@
 		panel.appendChild(logo);
 
 		const title = document.createElement("div");
-		title.textContent = 'Reddit Comments Overkill';
+		title.textContent = 'Reddit Comments Overkill  v' + VERSION;
 		Object.assign(title.style, {
 			fontSize: '20px',
 			fontWeight: 'bold',
@@ -1213,7 +1296,7 @@
 		});
 		stopBtn.onclick = () => {
 			running = false;
-			updateUrlState(false, '', undefined, preserveDotComments, dryRun);
+			updateUrlState(false, '', undefined, preserveDotComments, xMeansDelete, dryRun);
 			hideOverlay();
 			hideBadge();
 		};
@@ -1241,7 +1324,7 @@
 		// Update status prominently
 		const statusEl = overlayStatusEl;
 		if (statusEl) {
-			statusEl.innerHTML = '<span style="font-size:28px;color:#2e7d32">&#10003;</span><br><strong style="font-size:22px;color:#2e7d32">Complete!</strong><br><span style="font-size:14px;color:#555">All 4 sorts processed. Your comments have been deleted according to your settings.</span>';
+			statusEl.innerHTML = '<span style="font-size:28px;color:#2e7d32">&#10003;</span><br><strong style="font-size:22px;color:#2e7d32">Complete!  v' + VERSION + '</strong><br><span style="font-size:14px;color:#555">All 4 sorts processed. Your comments have been deleted according to your settings.</span>';
 		}
 		// Replace the button row with a single OK button
 		const oldRow = overlayEl.querySelector('.rco-btn-row');
@@ -1366,7 +1449,7 @@
 			}
 		} else {
 			running = false;
-			updateUrlState(false, '', undefined, preserveDotComments, dryRun);
+			updateUrlState(false, '', undefined, preserveDotComments, xMeansDelete, dryRun);
 			updateButtonState();
 			hideOverlay();
 			hideBadge();

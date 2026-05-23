@@ -1,0 +1,247 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Reddit Comments Overkill</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif;
+    line-height: 1.6;
+    color: #1a1a2e;
+    background: #f8f9fa;
+    padding: 0;
+  }
+  .container { max-width: 800px; margin: 0 auto; padding: 40px 20px; }
+  .card {
+    background: #fff;
+    border-radius: 12px;
+    padding: 40px;
+    box-shadow: 0 2px 12px rgba(0,0,0,0.08);
+  }
+  h1 {
+    font-size: 2em;
+    color: #d00;
+    border-bottom: 2px solid #fee;
+    padding-bottom: 12px;
+    margin-bottom: 24px;
+  }
+  h2 { font-size: 1.4em; color: #d00; margin-top: 32px; margin-bottom: 12px; }
+  h3 { font-size: 1.15em; color: #333; margin-top: 24px; margin-bottom: 8px; }
+  p { margin-bottom: 16px; color: #444; }
+  a { color: #d00; text-decoration: none; }
+  a:hover { text-decoration: underline; }
+  code {
+    background: #f1f1f1;
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-size: 0.9em;
+    color: #d00;
+  }
+  pre {
+    background: #1a1a2e;
+    color: #e4e4e4;
+    padding: 16px;
+    border-radius: 8px;
+    overflow-x: auto;
+    font-size: 0.85em;
+    margin-bottom: 16px;
+  }
+  pre code { background: none; color: inherit; padding: 0; }
+  ul, ol { margin-bottom: 16px; padding-left: 24px; color: #444; }
+  li { margin-bottom: 6px; }
+  hr { border: none; border-top: 1px solid #eee; margin: 32px 0; }
+  blockquote {
+    border-left: 4px solid #d00;
+    background: #fff5f5;
+    padding: 12px 16px;
+    margin-bottom: 16px;
+    border-radius: 4px;
+    color: #555;
+  }
+  table { width: 100%; border-collapse: collapse; margin-bottom: 16px; }
+  th, td { border: 1px solid #ddd; padding: 8px 12px; text-align: left; }
+  th { background: #f5f5f5; font-weight: 600; }
+  img { max-width: 100%; height: auto; border-radius: 8px; }
+  .footer { text-align: center; color: #999; font-size: 0.85em; margin-top: 32px; }
+  .top-bar {
+    position: fixed;
+    top: 0; left: 0; right: 0;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+    padding: 8px 20px;
+    background: rgba(255,255,255,0.9);
+    backdrop-filter: blur(6px);
+    z-index: 100;
+    border-bottom: 1px solid #eee;
+  }
+  .top-bar-left { display: flex; align-items: center; gap: 10px; }
+  .top-bar-left img { border-radius: 4px; }
+  .top-bar-left a { color: #333; font-weight: bold; font-size: 15px; text-decoration: none; }
+  .top-bar-left a:hover { color: #d00; }
+  .top-bar-right { display: flex; align-items: center; gap: 10px; }
+  .top-bar-right a { line-height: 0; }
+  .top-bar svg { transition: fill 0.2s; }
+  .top-bar a:hover svg { fill: #d00; }
+  body { padding-top: 56px; }
+  @media (max-width: 600px) {
+    .card { padding: 20px; }
+    h1 { font-size: 1.5em; }
+  }
+</style>
+</head>
+<body>
+<div class="top-bar">
+  <div class="top-bar-left">
+    <img src="./reddit-comments-overkill-web.png" alt="" style="width:24px;height:26px;">
+    <a href="https://github.com/xpufx/reddit-comments-overkill">Reddit Comments Overkill</a>
+  </div>
+  <div class="top-bar-right">
+    <a href="https://github.com/xpufx/reddit-comments-overkill" title="View on GitHub">
+      <svg height="22" viewBox="0 0 16 16" fill="#666"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/></svg>
+    </a>
+    <a href="https://github.com/xpufx/reddit-comments-overkill/raw/refs/heads/main/reddit-comments-overkill.user.js" title="Install userscript">
+      <img src="https://violentmonkey.github.io/_astro/vm.C4h557K-.png" alt="Install" style="width:22px;height:22px;border-radius:3px;vertical-align:middle;">
+    </a>
+  </div>
+</div>
+<div class="container">
+<div class="card">
+<p align="center">
+  <img src="./reddit-comments-overkill-web.png" alt="Reddit Comments Overkill logo" width="300">
+</p><p>A browser userscript that automatically deletes all your Reddit comments. It&#39;s designed to be reliable and respect Reddit&#39;s rate limits while ensuring complete coverage of your comment history. Reddit has a lot of protections in place to throttle requests. This script does NOT try to be the fastest but instead tries to ensure ALL comments will eventually be gone without requiring user interaction.</p>
+<p align="center">
+  <img src="./reddit-comments-overkill-screenshot.png" alt="Reddit Comments Overkill screenshot" width="600">
+</p><h2>Features</h2>
+<ul>
+<li><p><strong>Complete Coverage</strong>: Cycles through all 4 sort types (<code>new</code>, <code>hot</code>, <code>top</code>, <code>controversial</code>) to find every comment. However due to the way Reddit caches comments, you may have to run the script again after some hours.</p>
+</li>
+<li><p><strong>Date Protection</strong>: By default, comments from the last 10 days are preserved. Configurable in the confirmation modal.</p>
+</li>
+<li><p><strong>Dot Preservation</strong>: If you want to keep a particular comment no matter what, just edit that comment and add a single dot (<code>.</code>) on its own line at the end. The script will detect this and skip it regardless of age. Toggle this feature in the confirmation modal. (Default: enabled)</p>
+</li>
+<li><p><strong>Dry-Run Mode</strong>: Log actions without actually deleting comments. Useful for testing dot detection and previewing deletions. Toggle in the confirmation modal.</p>
+</li>
+<li><p><strong>Rate Limit Handling</strong>:</p>
+<ul>
+<li>Automatically detects rate limits (429 errors) from both <code>fetch</code> and <code>XMLHttpRequest</code>.</li>
+<li>Implements exponential backoff, doubling the wait time after each rate limit detection (e.g., 60s, 120s, 240s) up to a maximum of 30 minutes.</li>
+</ul>
+</li>
+<li><p><strong>Detailed Logging</strong>: All actions, including deletions, sort changes, and rate limit warnings, are logged to the browser&#39;s developer console (F12).</p>
+</li>
+</ul>
+<h2>Installation</h2>
+<h3>Step-by-Step Guide</h3>
+<ol>
+<li><p><strong>Install a userscript manager</strong> (if you don&#39;t have one):</p>
+<ul>
+<li><strong>Primary recommendation</strong>: <a href="https://violentmonkey.github.io/">Violentmonkey</a> (tested and confirmed working)</li>
+<li>Alternative options:<ul>
+<li><a href="https://www.tampermonkey.net/">Tampermonkey</a> (Chrome/Firefox/Edge)</li>
+<li><a href="https://www.greasespot.net/">Greasemonkey</a> (Firefox only)</li>
+</ul>
+</li>
+</ul>
+</li>
+<li><p><strong>Install the script</strong>:</p>
+<ul>
+<li>Click on the <code>reddit-comments-overkill.user.js</code> file in this repository</li>
+<li>Click the &quot;Raw&quot; button to view the raw script</li>
+<li>Your userscript manager should prompt you to install it — if it doesn&#39;t, copy the entire script content (Ctrl+A, Ctrl+C), open your userscript manager&#39;s dashboard, create a new script, paste, and save (Ctrl+S)</li>
+</ul>
+</li>
+<li><p><strong>Verify installation</strong>:</p>
+<ul>
+<li>Go to your Reddit user comments page on old Reddit (see Usage below)</li>
+<li>You should see a &quot;Reddit Comments Overkill&quot; button in the bottom-right corner</li>
+</ul>
+</li>
+</ol>
+<h2>Usage</h2>
+<ol>
+<li>Navigate to your Reddit user comments page on <strong>old Reddit</strong> (the new Reddit UI is not supported):<ul>
+<li><code><a href="https://old.reddit.com/user/">https://old.reddit.com/user/</a><em>yourusername</em>/comments/</code></li>
+</ul>
+</li>
+</ol>
+<p>Direct install link: <code><a href="https://github.com/xpufx/reddit-comments-overkill/raw/refs/heads/main/reddit-comments-overkill.user.js">https://github.com/xpufx/reddit-comments-overkill/raw/refs/heads/main/reddit-comments-overkill.user.js</a></code></p>
+<ol start="2">
+<li><p>Click the <strong>&quot;Start Deleting&quot;</strong> button in the bottom-right corner</p>
+</li>
+<li><p>A confirmation modal will appear where you can configure:</p>
+<ul>
+<li><strong>Days to preserve</strong> (default: 10)</li>
+<li><strong>Dot preservation</strong> toggle (default: enabled)</li>
+<li><strong>Dry-run mode</strong> toggle (default: disabled)</li>
+</ul>
+</li>
+<li><p>The script will:</p>
+<ul>
+<li>Begin deleting comments starting from the current page&#39;s sort</li>
+<li>Process all 4 sort types automatically (new → hot → top → controversial)</li>
+<li>Show progress in browser console</li>
+<li>Handle rate limits and pagination automatically</li>
+<li>Preserve recent comments and dot-marked comments based on your settings</li>
+</ul>
+</li>
+<li><p>To stop the process, click <strong>&quot;Stop Deleting&quot;</strong> (button turns red when running)</p>
+</li>
+</ol>
+<h2>Configuration</h2>
+<p>Most settings can be configured in the confirmation modal when you click &quot;Start Deleting&quot;:</p>
+<ul>
+<li><strong>Days to preserve</strong>: Number input (0–365) to set how many days of recent comments to keep</li>
+<li><strong>Dot preservation</strong>: Checkbox to preserve comments ending with a single <code>.</code> on its own line</li>
+<li><strong>Dry-run mode</strong>: Checkbox to log actions without actually deleting</li>
+</ul>
+<p>For advanced configuration (rate limits, delays, sort order), edit the <code>CONFIG</code> section at the top of the script file.</p>
+<h2>Troubleshooting</h2>
+<h3>Script not starting</h3>
+<ul>
+<li>Ensure you&#39;re on your old Reddit user comments page (URL should contain <code>old.reddit.com/user/<em>yourusername</em>/comments/</code>)</li>
+<li>Check that your userscript manager is enabled and the script is active</li>
+<li>Look for the &quot;Reddit Comments Overkill&quot; button in the bottom-right corner</li>
+<li>Open browser console (F12) to see if the script is loading</li>
+</ul>
+<h3>Comments not being deleted</h3>
+<ul>
+<li>Check if comments are newer than your configured preserve days (they&#39;re preserved by default)</li>
+<li>Check if comments end with a dot on its own line (dot preservation is enabled by default)</li>
+<li>Open browser console (F12) to see script activity and error messages</li>
+<li>Check if rate limiting is active (script will wait automatically)</li>
+</ul>
+<h3>Contributing</h3>
+<ol>
+<li>Not at this time</li>
+</ol>
+<h2>AI Authorship Disclosure</h2>
+<p>Please note that a significant portion of this codebase, including its core logic and structure, has been generated by an AI. The functionality has been manually tested using Violentmonkey.</p>
+<h2>License</h2>
+<p>This project is licensed under the GNU General Public License v2.0 (GPL v2).</p>
+<p>Copyright (C) 2025 xpufx </p>
+<h2>Disclaimer</h2>
+<p>This script modifies your Reddit account by permanently deleting comments. Use at your own risk. The authors are not responsible for any data loss or account issues. Always consider the implications of bulk deleting your comment history.</p>
+
+<div class="footer" style="margin-top:32px;padding-top:20px;border-top:1px solid #eee;">
+  <div style="font-size:0.9em;color:#999;margin-bottom:12px;font-weight:600;">OTHER PROJECTS</div>
+  <a href="https://uppidi.com" style="color:#999;text-decoration:none;display:flex;align-items:center;gap:16px;justify-content:center;flex-wrap:wrap;">
+    <img src="https://github.com/xpufx/uppidi-upload/raw/main/assets/logo.png" alt="Uppidi Upload" style="width:48px;height:48px;border-radius:8px;">
+    <span style="text-align:left;">
+      <span style="display:block;font-weight:600;color:#333;font-size:1.1em;">Uppidi Upload</span>
+      <span style="display:block;color:#999;font-size:0.85em;">Cross-platform file uploader for Android, Linux, Windows &amp; web</span>
+    </span>
+  </a>
+</div>
+<div class="footer" style="margin-top:8px;">
+  <a href="https://github.com/xpufx/reddit-comments-overkill">
+    <svg height="18" viewBox="0 0 16 16" fill="#999" style="vertical-align:middle;"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/></svg>
+  </a>
+</div>
+</div>
+</div>
+</body>
+</html>
