@@ -16,7 +16,8 @@ A browser userscript that automatically deletes all your Reddit comments. It's d
 
 - **Date Protection**: By default, comments from the last 10 days are preserved. Configurable in the confirmation modal.
 - **Dot Preservation**: If you want to keep a particular comment no matter what, just edit that comment and add a single dot (`.`) on its own line at the end. The script will detect this and skip it regardless of age. Toggle this feature in the confirmation modal. (Default: enabled)
-- **Dry-Run Mode**: Log actions without actually deleting comments. Useful for testing dot detection and previewing deletions. Toggle in the confirmation modal.
+- **X Means Delete**: If you want to force-delete a particular comment regardless of its age, just edit that comment and add a single `x` on its own line at the end. This overrides the date filter and will delete even 1-day-old comments. Toggle in the confirmation modal. (Default: disabled)
+- **Dry-Run Mode**: Log actions without actually deleting comments. Useful for testing dot/x detection and previewing deletions. Toggle in the confirmation modal.
 - **Rate Limit Handling**:
     - Automatically detects rate limits (429 errors) from both `fetch` and `XMLHttpRequest`.
     - Implements exponential backoff, doubling the wait time after each rate limit detection (e.g., 60s, 120s, 240s) up to a maximum of 30 minutes.
@@ -53,6 +54,7 @@ Direct install link: <code>https://github.com/xpufx/reddit-comments-overkill/raw
 3. A confirmation modal will appear where you can configure:
    - **Days to preserve** (default: 10)
    - **Dot preservation** toggle (default: enabled)
+   - **X means delete** toggle (default: disabled)
    - **Dry-run mode** toggle (default: disabled)
    
 4. The script will:
@@ -61,6 +63,7 @@ Direct install link: <code>https://github.com/xpufx/reddit-comments-overkill/raw
    - Show progress in browser console
    - Handle rate limits and pagination automatically
    - Preserve recent comments and dot-marked comments based on your settings
+   - Force-delete x-marked comments if enabled
 
 5. To stop the process, click **"Stop Deleting"** (button turns red when running)
 
@@ -70,6 +73,7 @@ Most settings can be configured in the confirmation modal when you click "Start 
 
 - **Days to preserve**: Number input (0–365) to set how many days of recent comments to keep
 - **Dot preservation**: Checkbox to preserve comments ending with a single `.` on its own line
+- **X means delete**: Checkbox to force-delete comments ending with a single `x` on its own line, overriding the date filter
 - **Dry-run mode**: Checkbox to log actions without actually deleting
 
 For advanced configuration (rate limits, delays, sort order), edit the `CONFIG` section at the top of the script file.
@@ -85,6 +89,7 @@ For advanced configuration (rate limits, delays, sort order), edit the `CONFIG` 
 ### Comments not being deleted
 - Check if comments are newer than your configured preserve days (they're preserved by default)
 - Check if comments end with a dot on its own line (dot preservation is enabled by default)
+- Check if comments ending with x on their own line are being force-deleted (x-means-delete is disabled by default)
 - Open browser console (F12) to see script activity and error messages
 - Check if rate limiting is active (script will wait automatically)
 

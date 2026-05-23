@@ -1032,34 +1032,7 @@
 			log("Dry-run setting changed to:", dryRun);
 		});
 
-		// Simulation mode checkbox (only relevant when dry-run is off)
-		const simContainer = document.createElement("div");
-		simContainer.style.cssText = "margin-bottom: 20px; display: flex; align-items: center; gap: 10px;";
-
-		const simCheckbox = document.createElement("input");
-		simCheckbox.type = "checkbox";
-		simCheckbox.id = "simulate-mode";
-		simCheckbox.checked = simulate;
-		simCheckbox.style.cssText = "width: 18px; height: 18px;";
-
-		const simLabel = document.createElement("label");
-		simLabel.htmlFor = "simulate-mode";
-		simLabel.textContent = "Simulation mode: click No on confirmation (safe)";
-		simLabel.style.cssText = "font-weight: bold; cursor: pointer;";
-
-		simContainer.appendChild(simCheckbox);
-		simContainer.appendChild(simLabel);
-		content.appendChild(simContainer);
-
-		// Update variable when checkbox changes
-		simCheckbox.addEventListener('change', () => {
-			simulate = simCheckbox.checked;
-			log("Simulation mode changed to:", simulate);
-			const modeSpan = document.getElementById('rco-mode-text');
-			if (modeSpan) {
-				modeSpan.textContent = simulate ? "SIMULATION MODE — comments will NOT be deleted" : "Comments WILL be permanently deleted";
-			}
-		});
+		// Simulation mode is always on by default — hidden from UI, controllable via ?rco_simulate=false
 
 		// x-means-delete checkbox
 		const xContainer = document.createElement("div");
