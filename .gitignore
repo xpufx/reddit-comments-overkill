@@ -4,3 +4,6 @@ AGENTS.md
 # Temp files (audit reports, generated assets)
 /temp/
 /reddit-logo-*.png
+
+# Node.js dependencies
+node_modules/
