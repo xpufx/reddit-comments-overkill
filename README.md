@@ -8,7 +8,7 @@ A browser userscript that automatically deletes all your Reddit comments. It's d
 
 ## Why
 
-Reddit has recently stopped issuing app tokens for users, further restricting direct API use. This means existing scripts, apps, and browser extensions that rely on the API are no longer likely to work. This script uses **web scraping** from your own browser to delete comments — no API tokens needed.
+Reddit has recently stopped issuing app tokens for users, further restricting direct API use. This means existing scripts, apps, and browser extensions that rely on the API are no longer likely to work. This script uses **web scraping** from your own browser to delete comments. No API tokens needed.
 
 <p align="center">
   <img src="./reddit-comments-overkill-screenshot.png" alt="Reddit Comments Overkill screenshot" width="600">
