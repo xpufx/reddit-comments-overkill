@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Reddit Comments Overkill
 // @namespace    https://github.com/xpufx/reddit-comments-overkill
-// @version      2.49
+// @version      2.50
 // @description  Deletes all comments by cycling sorts reliably, retrying on rate limits, waiting for comments, handling infinite scroll & next page, with Start/Stop control.
 // @downloadURL  https://github.com/xpufx/reddit-comments-overkill/raw/refs/heads/main/reddit-comments-overkill.user.js
 // @updateURL    https://github.com/xpufx/reddit-comments-overkill/raw/refs/heads/main/reddit-comments-overkill.user.js
@@ -21,7 +21,7 @@
 	 * CONFIG
 	 ************************/
 	const SCRIPT_NAME = "Reddit Comments Overkill";
-	const VERSION = "2.49";
+	const VERSION = "2.50";
 	const LOGGING_ENABLED = true; // Set to false to disable console logging
 	const SORTS = ["new", "hot", "top", "controversial"];
 	const WAIT_FOR_COMMENTS_MS = 8000;
