@@ -34,7 +34,7 @@
 	let preserveDotComments = true; // Preserve comments that end with a dot (.) on its own line
 	let xMeansDelete = false; // Comments ending with x on its own line are force-deleted regardless of age (opt-in)
 	let dryRun = false; // Dry run mode: log actions without actually deleting
-	let simulate = true; // Simulation mode: click "No" on confirmation instead of "Yes" — safe for debugging
+	let simulate = false; // Simulation mode: click "No" on confirmation instead of "Yes" — enable via ?rco_simulate=true
 
 	// Embedded logo images (base64) — just PNG files, nothing sinister
 	// Used in the overlay and confirmation modal for the script UI
@@ -135,7 +135,7 @@
 		if (simParam !== null) {
 			return simParam === 'true';
 		}
-		return true; // default to safe simulation mode
+		return false; // simulation off by default — enable via ?rco_simulate=true
 	}
 
 	function updateUrlState(isRunning, sortName, daysToPreserve, preserveDotComments, xMeansDelete, dryRun) {
