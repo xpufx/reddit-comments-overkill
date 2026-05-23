@@ -946,7 +946,7 @@
 
 		const warning = document.createElement("p");
 		const modeText = simulate ? "SIMULATION MODE — comments will NOT be deleted" : "Comments WILL be permanently deleted";
-		warning.innerHTML = `<span id="rco-mode-text">[${modeText}]</span><br><br>This will process all your Reddit comments across all sort types (new, hot, top, controversial). Comments from the last <span id='days-display'>${daysToPreserve}</span> days will be preserved. You can also preserve comments ending with a dot (.) on their own line, or force-delete comments ending with x on their own line.`;
+		warning.innerHTML = `<span id="rco-mode-text">[${modeText}]</span><br><br>This will process all your Reddit comments across all sort types (new, hot, top, controversial). Comments from the last <span id='days-display'>${daysToPreserve}</span> days will be preserved. You can also preserve comments ending with a single <code>.</code> on its own line, or force-delete comments ending with a single <code>x</code> on its own line.`;
 		warning.style.cssText = "margin-bottom: 10px; line-height: 1.4;";
 		content.appendChild(warning);
 
