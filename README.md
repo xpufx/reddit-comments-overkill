@@ -19,7 +19,7 @@ Reddit has recently stopped issuing app tokens for users, further restricting di
 - **Complete Coverage**: Cycles through all 4 sort types (`new`, `hot`, `top`, `controversial`) to find every comment. However due to the way Reddit caches comments, you may have to run the script again after some hours.
 
 - **Date Protection**: By default, comments from the last 10 days are preserved. Configurable in the confirmation modal.
-- **Dot Preservation**: If you want to keep a particular comment no matter what, just edit that comment and add a single `.` on its own line at the end. The script will detect this and skip it regardless of age. Toggle this feature in the confirmation modal. (Default: enabled)
+- **Dot Preservation**: If you want to keep a particular comment no matter what, just edit that comment and add a single dot (`.`) on its own line at the end. The script will detect this and skip it regardless of age. Toggle this feature in the confirmation modal. (Default: enabled)
 - **X Means Delete**: If you want to force-delete a particular comment regardless of its age, just edit that comment and add a single `x` on its own line at the end. This overrides the date filter and will delete even 1-day-old comments. Toggle in the confirmation modal. (Default: disabled)
 - **Dry-Run Mode**: Log actions without actually deleting comments. Useful for testing dot/x detection and previewing deletions. Toggle in the confirmation modal.
 - **Non-feature**: This script does **not** edit your comments with garbage text before deleting them, unlike some other solutions. It deletes them cleanly in their original state.
