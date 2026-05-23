@@ -6,6 +6,10 @@
 
 A browser userscript that automatically deletes all your Reddit comments. It's designed to be reliable and respect Reddit's rate limits while ensuring complete coverage of your comment history. Reddit has a lot of protections in place to throttle requests. This script does NOT try to be the fastest but instead tries to ensure ALL comments will eventually be gone without requiring user interaction.
 
+## Why
+
+Reddit has recently stopped issuing app tokens for users, further restricting direct API use. This means existing scripts, apps, and browser extensions that rely on the API are no longer likely to work. This script uses **web scraping** from your own browser to delete comments — no API tokens needed.
+
 <p align="center">
   <img src="./reddit-comments-overkill-screenshot.png" alt="Reddit Comments Overkill screenshot" width="600">
 </p>
@@ -18,6 +22,7 @@ A browser userscript that automatically deletes all your Reddit comments. It's d
 - **Dot Preservation**: If you want to keep a particular comment no matter what, just edit that comment and add a single `.` on its own line at the end. The script will detect this and skip it regardless of age. Toggle this feature in the confirmation modal. (Default: enabled)
 - **X Means Delete**: If you want to force-delete a particular comment regardless of its age, just edit that comment and add a single `x` on its own line at the end. This overrides the date filter and will delete even 1-day-old comments. Toggle in the confirmation modal. (Default: disabled)
 - **Dry-Run Mode**: Log actions without actually deleting comments. Useful for testing dot/x detection and previewing deletions. Toggle in the confirmation modal.
+- **Non-feature**: This script does **not** edit your comments with garbage text before deleting them, unlike some other solutions. It deletes them cleanly in their original state.
 - **Rate Limit Handling**:
     - Automatically detects rate limits (429 errors) from both `fetch` and `XMLHttpRequest`.
     - Implements exponential backoff, doubling the wait time after each rate limit detection (e.g., 60s, 120s, 240s) up to a maximum of 30 minutes.
