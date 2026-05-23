@@ -53,8 +53,5 @@ echo
 echo "=== Done ==="
 echo "Tag v$meta_ver created and pushed."
 echo
-echo "To create a GitHub release, go to:"
+echo "Create a GitHub release at:"
 echo "  https://github.com/xpufx/reddit-comments-overkill/releases/new?tag=v$meta_ver"
-echo
-echo "Or from command line if you have 'gh' installed:"
-echo "  gh release create v$meta_ver --generate-notes"
