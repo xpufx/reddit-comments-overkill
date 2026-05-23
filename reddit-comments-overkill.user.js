@@ -1261,11 +1261,38 @@
 		overlayStatusEl.textContent = 'Starting...';
 		panel.appendChild(overlayStatusEl);
 
+		const logContainer = document.createElement("div");
+		Object.assign(logContainer.style, {
+			position: 'relative',
+			marginBottom: '12px'
+		});
+
+		const copyBtn = document.createElement("button");
+		copyBtn.textContent = '📋';
+		copyBtn.title = 'Copy log';
+		Object.assign(copyBtn.style, {
+			position: 'absolute',
+			top: '2px', right: '2px',
+			background: '#fff',
+			border: '1px solid #ccc',
+			borderRadius: '3px',
+			cursor: 'pointer',
+			fontSize: '12px',
+			padding: '2px 6px',
+			zIndex: '1',
+			lineHeight: '1'
+		});
+		copyBtn.onclick = () => {
+			const text = persistedLog.join('\n');
+			navigator.clipboard.writeText(text).catch(() => {});
+			copyBtn.textContent = '✓';
+			setTimeout(() => { copyBtn.textContent = '📋'; }, 1500);
+		};
+
 		overlayLogEl = document.createElement("div");
 		Object.assign(overlayLogEl.style, {
 			fontSize: '12px',
 			color: '#555',
-			marginBottom: '12px',
 			height: '120px',
 			overflowY: 'auto',
 			fontFamily: 'monospace',
@@ -1276,7 +1303,9 @@
 			borderRadius: '4px',
 			padding: '6px'
 		});
-		panel.appendChild(overlayLogEl);
+		logContainer.appendChild(overlayLogEl);
+		logContainer.appendChild(copyBtn);
+		panel.appendChild(logContainer);
 
 		// Restore persisted log lines from previous page loads
 		if (persistedLog.length) {
