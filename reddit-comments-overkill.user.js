@@ -461,7 +461,9 @@
 			}
 
 			if (lines[lines.length - 1] === 'x') {
-				log('shouldDeleteCommentByX: Force-deleting comment ending with x — raw text:', JSON.stringify(raw));
+				const matchIdx = lines.length - 1;
+				const context = lines.slice(Math.max(0, matchIdx - 1), matchIdx + 2).join(' | ');
+				log('shouldDeleteCommentByX: Force-deleting — matched line:', JSON.stringify(lines[matchIdx]), 'context:', JSON.stringify(context));
 				return true;
 			}
 
