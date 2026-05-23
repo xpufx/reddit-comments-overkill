@@ -46,16 +46,28 @@
 	let overlayStatusEl = null;
 	let overlayLogEl = null;
 
+	// Persist log across page reloads via localStorage
+	function loadPersistedLog() {
+		try { return JSON.parse(localStorage.getItem('rco_log') || '[]'); } catch { return []; }
+	}
+	function savePersistedLog(lines) {
+		try { localStorage.setItem('rco_log', JSON.stringify(lines.slice(-200))); } catch { /* ignore quota */ }
+	}
+	let persistedLog = loadPersistedLog();
+
 	// Logging function to consistently identify our script
 	function log(message, ...args) {
 		if (LOGGING_ENABLED) {
 			const logMessage = "[" + SCRIPT_NAME + "] " + message;
 			console.log(logMessage, ...args);
 		}
+		// Persist to localStorage so it survives page reloads between sorts
+		const extra = args.length ? ' ' + args.map(a => typeof a === 'object' ? JSON.stringify(a) : String(a)).join(' ') : '';
+		const line = (message + extra).slice(0, 250);
+		persistedLog.push(line);
+		savePersistedLog(persistedLog);
 		// Stream logs to overlay (accumulates in fixed-height scrollable area)
 		if (overlayLogEl) {
-			const extra = args.length ? ' ' + args.map(a => typeof a === 'object' ? JSON.stringify(a) : String(a)).join(' ') : '';
-			const line = (message + extra).slice(0, 200);
 			overlayLogEl.textContent += (overlayLogEl.textContent ? '\n' : '') + line;
 			overlayLogEl.scrollTop = overlayLogEl.scrollHeight;
 		}
@@ -1139,6 +1151,9 @@
 			const currentSort = getCurrentSort();
 			updateUrlState(running, currentSort, daysToPreserve, preserveDotComments, xMeansDelete, dryRun);
 
+			// Clear persisted log for fresh start
+			persistedLog = [];
+			savePersistedLog([]);
 			showOverlay();
 			updateOverlay('Starting...', 'Processing all 4 sort types');
 			mainRunning = true;
@@ -1185,7 +1200,8 @@
 	function showOverlay() {
 		if (overlayEl) return; // already showing
 		hideBadge();
-		// Clear log area for fresh start
+		// Restore persisted log from localStorage
+		persistedLog = loadPersistedLog();
 
 		overlayEl = document.createElement("div");
 		overlayEl.id = 'rco-overlay';
@@ -1261,6 +1277,12 @@
 			padding: '6px'
 		});
 		panel.appendChild(overlayLogEl);
+
+		// Restore persisted log lines from previous page loads
+		if (persistedLog.length) {
+			overlayLogEl.textContent = persistedLog.join('\n');
+			overlayLogEl.scrollTop = overlayLogEl.scrollHeight;
+		}
 
 		const btnRow = document.createElement("div");
 		btnRow.className = 'rco-btn-row';
