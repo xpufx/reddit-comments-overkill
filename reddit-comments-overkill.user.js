@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Reddit Comments Overkill
 // @namespace    https://github.com/xpufx/reddit-comments-overkill
-// @version      2.46
+// @version      2.47
 // @description  Deletes all comments by cycling sorts reliably, retrying on rate limits, waiting for comments, handling infinite scroll & next page, with Start/Stop control.
 // @downloadURL  https://github.com/xpufx/reddit-comments-overkill/raw/refs/heads/main/reddit-comments-overkill.user.js
 // @updateURL    https://github.com/xpufx/reddit-comments-overkill/raw/refs/heads/main/reddit-comments-overkill.user.js
@@ -21,7 +21,7 @@
 	 * CONFIG
 	 ************************/
 	const SCRIPT_NAME = "Reddit Comments Overkill";
-	const VERSION = "2.46";
+	const VERSION = "2.47";
 	const LOGGING_ENABLED = true; // Set to false to disable console logging
 	const SORTS = ["new", "hot", "top", "controversial"];
 	const WAIT_FOR_COMMENTS_MS = 8000;
@@ -32,7 +32,7 @@
 	const LONG_DELAY_MS = [10000, 15000];
 	let daysToPreserve = 10; // Keep comments from the last N days (set to 0 to delete all comments regardless of age)
 	let preserveDotComments = true; // Preserve comments that end with a dot (.) on its own line
-	let xMeansDelete = true; // Comments ending with x on its own line are force-deleted regardless of age
+	let xMeansDelete = false; // Comments ending with x on its own line are force-deleted regardless of age (opt-in)
 	let dryRun = false; // Dry run mode: log actions without actually deleting
 	let simulate = true; // Simulation mode: click "No" on confirmation instead of "Yes" — safe for debugging
 
@@ -105,7 +105,7 @@
 		if (xParam !== null) {
 			return xParam === 'true';
 		}
-		return true; // default
+		return false; // opt-in
 	}
 
 	function getDryRunFromUrl() {
@@ -461,7 +461,7 @@
 			}
 
 			if (lines[lines.length - 1] === 'x') {
-				log('shouldDeleteCommentByX: Force-deleting comment ending with x');
+				log('shouldDeleteCommentByX: Force-deleting comment ending with x — raw text:', JSON.stringify(raw));
 				return true;
 			}
 
