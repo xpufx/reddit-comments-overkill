@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Reddit Comments Overkill
 // @namespace    https://github.com/xpufx/reddit-comments-overkill
-// @version      2.51
+// @version      2.52
 // @description  Deletes all comments by cycling sorts reliably, retrying on rate limits, waiting for comments, handling infinite scroll & next page, with Start/Stop control.
 // @downloadURL  https://github.com/xpufx/reddit-comments-overkill/raw/refs/heads/main/reddit-comments-overkill.user.js
 // @updateURL    https://github.com/xpufx/reddit-comments-overkill/raw/refs/heads/main/reddit-comments-overkill.user.js
@@ -21,7 +21,7 @@
 	 * CONFIG
 	 ************************/
 	const SCRIPT_NAME = "Reddit Comments Overkill";
-	const VERSION = "2.51";
+	const VERSION = "2.52";
 	const LOGGING_ENABLED = true; // Set to false to disable console logging
 	const SORTS = ["new", "hot", "top", "controversial"];
 	const WAIT_FOR_COMMENTS_MS = 8000;
@@ -238,6 +238,20 @@
 	 ************************/
 	const sleep = ms => new Promise(r => setTimeout(r, ms));
 	const rand = (a, b) => Math.floor(Math.random() * (b - a + 1)) + a;
+
+	// Log the result of date/dot/x checks when a comment is actually deleted
+	function logCommentState(btn, action) {
+		const commentElement = btn.closest('.comment, .thing, .entry, [id^=t1_]');
+		if (!commentElement) { log('DELETE DEBUG: no commentElement for', action); return; }
+		const timeEl = commentElement.querySelector('time[datetime]');
+		const text = timeEl ? (timeEl.textContent || '').trim() : 'no time';
+		const age = parseAgeDays(text);
+		const skipByDate = shouldSkipCommentByDate(commentElement);
+		const skipByDot = shouldSkipCommentByDot(commentElement);
+		const forceX = shouldDeleteCommentByX(commentElement);
+		log('DELETE DEBUG: ' + action + ' — text="' + text + '" ageDays=' + age + ' preserve=' + daysToPreserve +
+			' skipByDate=' + skipByDate + ' skipByDot=' + skipByDot + ' forceX=' + forceX);
+	}
 
 	// -------- fetch monkey patch --------
 	const originalFetch = window.fetch;
@@ -548,6 +562,9 @@
 	 ************************/
 	async function deleteComment(btn) {
 		let success = false;
+
+		// Log full diagnostic before any action
+		logCommentState(btn, 'deleteComment called');
 
 		// Dry-run mode: log action without actually deleting
 		if (dryRun) {
