@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Reddit Comments Overkill
 // @namespace    https://github.com/xpufx/reddit-comments-overkill
-// @version      2.54
+// @version      2.55
 // @description  Deletes all comments by cycling sorts reliably, retrying on rate limits, waiting for comments, handling infinite scroll & next page, with Start/Stop control.
 // @downloadURL  https://github.com/xpufx/reddit-comments-overkill/raw/refs/heads/main/reddit-comments-overkill.user.js
 // @updateURL    https://github.com/xpufx/reddit-comments-overkill/raw/refs/heads/main/reddit-comments-overkill.user.js
@@ -21,7 +21,7 @@
 	 * CONFIG
 	 ************************/
 	const SCRIPT_NAME = "Reddit Comments Overkill";
-	const VERSION = "2.54";
+	const VERSION = "2.55";
 	const LOGGING_ENABLED = true; // Set to false to disable console logging
 	const SORTS = ["new", "hot", "top", "controversial"];
 	const WAIT_FOR_COMMENTS_MS = 8000;
@@ -243,13 +243,10 @@
 	function logCommentState(btn, action) {
 		const commentElement = btn.closest('.comment, .thing, .entry, [id^=t1_]');
 		if (!commentElement) { log('DELETE DEBUG: no commentElement for', action); return; }
-		const timeEl = commentElement.querySelector('time[datetime]');
-		const text = timeEl ? (timeEl.textContent || '').trim() : 'no time';
-		const age = parseAgeDays(text);
 		const skipByDate = shouldSkipCommentByDate(commentElement);
 		const skipByDot = shouldSkipCommentByDot(commentElement);
 		const forceX = shouldDeleteCommentByX(commentElement);
-		log('DELETE DEBUG: ' + action + ' — text="' + text + '" ageDays=' + age + ' preserve=' + daysToPreserve +
+		log('DELETE DEBUG: ' + action + ' preserve=' + daysToPreserve +
 			' skipByDate=' + skipByDate + ' skipByDot=' + skipByDot + ' forceX=' + forceX);
 	}
 
@@ -365,40 +362,6 @@
 	 * DATE FILTERING
 	 ************************/
 
-	function parseAgeDays(text) {
-		if (!text) return null;
-		const t = text.toLowerCase().trim();
-
-		if (t === 'just now' || t === 'less than a minute ago') return 0;
-
-		// "a minute ago", "an hour ago", "a day ago" ...
-		const aMatch = t.match(/^a(?:n)?\s+(minute|hour|day|month|year)s?\s+ago$/);
-		if (aMatch) {
-			switch (aMatch[1]) {
-				case 'minute': return 1 / 1440;
-				case 'hour':   return 1 / 24;
-				case 'day':    return 1;
-				case 'month':  return 30;
-				case 'year':   return 365;
-			}
-		}
-
-		// "N minute(s) ago", "N hour(s) ago", "N day(s) ago" ... (with or without "ago")
-		const numMatch = t.match(/^(\d+)\s*(minute|hour|day|month|year)s?(?:\s+ago)?$/);
-		if (numMatch) {
-			const n = parseInt(numMatch[1], 10);
-			switch (numMatch[2]) {
-				case 'minute': return n / 1440;
-				case 'hour':   return n / 24;
-				case 'day':    return n;
-				case 'month':  return n * 30;
-				case 'year':   return n * 365;
-			}
-		}
-
-		return null;
-	}
-
 	function shouldSkipCommentByDate(commentElement) {
 		const timeEl = commentElement.querySelector('time[datetime]');
 		if (!timeEl) {
@@ -406,36 +369,21 @@
 			return true;
 		}
 
-		// Strategy 1: parse the datetime attribute (always UTC on old Reddit)
-		try {
-			const raw = (timeEl.getAttribute('datetime') || '').trim();
-			if (raw) {
-				// Append Z to treat as UTC (old Reddit datetime attributes are always UTC)
-				const commentDate = new Date(raw + 'Z');
-				if (!isNaN(commentDate.getTime())) {
-					const cutoff = Date.now() - daysToPreserve * 86400000;
-					log('shouldSkipCommentByDate: datetime="' + raw + '" commentTs=' + commentDate.getTime() + ' cutoffTs=' + cutoff + ' preserveDays=' + daysToPreserve);
-					return commentDate.getTime() >= cutoff;
-				}
-				log('shouldSkipCommentByDate: Unparseable datetime "' + raw + '", trying human text');
-			}
-		} catch (e) {
-			log('shouldSkipCommentByDate: Error parsing datetime:', e);
+		const raw = (timeEl.getAttribute('datetime') || '').trim();
+		if (!raw) {
+			log('shouldSkipCommentByDate: Empty datetime, preserving');
+			return true;
 		}
 
-		// Strategy 2: parse the human-readable text ("10 days ago")
-		const text = (timeEl.textContent || '').trim();
-		if (text) {
-			const age = parseAgeDays(text);
-			if (age !== null) {
-				log('shouldSkipCommentByDate: text="' + text + '" ageDays=' + age + ' preserveDays=' + daysToPreserve);
-				return age <= daysToPreserve;
-			}
-			log('shouldSkipCommentByDate: Unparseable text "' + text + '", preserving');
+		const d = new Date(raw);
+		if (isNaN(d.getTime())) {
+			log('shouldSkipCommentByDate: Unparseable datetime "' + raw + '", preserving');
+			return true;
 		}
 
-		log('shouldSkipCommentByDate: No parseable date info, preserving');
-		return true;
+		const cutoff = Date.now() - daysToPreserve * 86400000;
+		log('shouldSkipCommentByDate: datetime="' + raw + '" ts=' + d.getTime() + ' cutoff=' + cutoff + ' preserve=' + daysToPreserve + ' skip=' + (d.getTime() >= cutoff));
+		return d.getTime() >= cutoff;
 	}
 
 	function shouldSkipCommentByDot(commentElement) {
