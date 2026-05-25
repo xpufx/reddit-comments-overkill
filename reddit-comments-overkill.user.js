@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Reddit Comments Overkill
 // @namespace    https://github.com/xpufx/reddit-comments-overkill
-// @version      2.53
+// @version      2.54
 // @description  Deletes all comments by cycling sorts reliably, retrying on rate limits, waiting for comments, handling infinite scroll & next page, with Start/Stop control.
 // @downloadURL  https://github.com/xpufx/reddit-comments-overkill/raw/refs/heads/main/reddit-comments-overkill.user.js
 // @updateURL    https://github.com/xpufx/reddit-comments-overkill/raw/refs/heads/main/reddit-comments-overkill.user.js
@@ -21,7 +21,7 @@
 	 * CONFIG
 	 ************************/
 	const SCRIPT_NAME = "Reddit Comments Overkill";
-	const VERSION = "2.53";
+	const VERSION = "2.54";
 	const LOGGING_ENABLED = true; // Set to false to disable console logging
 	const SORTS = ["new", "hot", "top", "controversial"];
 	const WAIT_FOR_COMMENTS_MS = 8000;
@@ -406,7 +406,24 @@
 			return true;
 		}
 
-		// Strategy 1: parse the human-readable text ("10 days ago") — avoids timezone issues
+		// Strategy 1: parse the datetime attribute (always UTC on old Reddit)
+		try {
+			const raw = (timeEl.getAttribute('datetime') || '').trim();
+			if (raw) {
+				// Append Z to treat as UTC (old Reddit datetime attributes are always UTC)
+				const commentDate = new Date(raw + 'Z');
+				if (!isNaN(commentDate.getTime())) {
+					const cutoff = Date.now() - daysToPreserve * 86400000;
+					log('shouldSkipCommentByDate: datetime="' + raw + '" commentTs=' + commentDate.getTime() + ' cutoffTs=' + cutoff + ' preserveDays=' + daysToPreserve);
+					return commentDate.getTime() >= cutoff;
+				}
+				log('shouldSkipCommentByDate: Unparseable datetime "' + raw + '", trying human text');
+			}
+		} catch (e) {
+			log('shouldSkipCommentByDate: Error parsing datetime:', e);
+		}
+
+		// Strategy 2: parse the human-readable text ("10 days ago")
 		const text = (timeEl.textContent || '').trim();
 		if (text) {
 			const age = parseAgeDays(text);
@@ -414,29 +431,11 @@
 				log('shouldSkipCommentByDate: text="' + text + '" ageDays=' + age + ' preserveDays=' + daysToPreserve);
 				return age <= daysToPreserve;
 			}
-			log('shouldSkipCommentByDate: Unparseable text "' + text + '", trying datetime attribute');
+			log('shouldSkipCommentByDate: Unparseable text "' + text + '", preserving');
 		}
 
-		// Strategy 2: fall back to datetime attribute parsing
-		try {
-			const raw = (timeEl.getAttribute('datetime') || '').trim();
-			if (!raw) {
-				log('shouldSkipCommentByDate: Empty datetime, preserving');
-				return true;
-			}
-			const commentDate = new Date(raw);
-			if (isNaN(commentDate.getTime())) {
-				log('shouldSkipCommentByDate: Unparseable datetime "' + raw + '", preserving');
-				return true;
-			}
-			const cutoff = new Date();
-			cutoff.setDate(cutoff.getDate() - daysToPreserve);
-			log('shouldSkipCommentByDate: fallback datetime comment=' + commentDate.toISOString() + ' cutoff=' + cutoff.toISOString());
-			return commentDate >= cutoff;
-		} catch (e) {
-			log('shouldSkipCommentByDate: Error:', e);
-			return true;
-		}
+		log('shouldSkipCommentByDate: No parseable date info, preserving');
+		return true;
 	}
 
 	function shouldSkipCommentByDot(commentElement) {
