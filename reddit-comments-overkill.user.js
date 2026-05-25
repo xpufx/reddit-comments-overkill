@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Reddit Comments Overkill
 // @namespace    https://github.com/xpufx/reddit-comments-overkill
-// @version      2.52
+// @version      2.53
 // @description  Deletes all comments by cycling sorts reliably, retrying on rate limits, waiting for comments, handling infinite scroll & next page, with Start/Stop control.
 // @downloadURL  https://github.com/xpufx/reddit-comments-overkill/raw/refs/heads/main/reddit-comments-overkill.user.js
 // @updateURL    https://github.com/xpufx/reddit-comments-overkill/raw/refs/heads/main/reddit-comments-overkill.user.js
@@ -21,7 +21,7 @@
 	 * CONFIG
 	 ************************/
 	const SCRIPT_NAME = "Reddit Comments Overkill";
-	const VERSION = "2.52";
+	const VERSION = "2.53";
 	const LOGGING_ENABLED = true; // Set to false to disable console logging
 	const SORTS = ["new", "hot", "top", "controversial"];
 	const WAIT_FOR_COMMENTS_MS = 8000;
@@ -366,17 +366,37 @@
 	 ************************/
 
 	function parseAgeDays(text) {
-		const m = text.toLowerCase().match(/^(\d+)\s*(minute|hour|day|month|year)s?\s+ago$/);
-		if (!m) return null;
-		const n = parseInt(m[1], 10);
-		switch (m[2]) {
-			case 'minute': return n / 1440;
-			case 'hour':   return n / 24;
-			case 'day':    return n;
-			case 'month':  return n * 30;
-			case 'year':   return n * 365;
-			default:       return null;
+		if (!text) return null;
+		const t = text.toLowerCase().trim();
+
+		if (t === 'just now' || t === 'less than a minute ago') return 0;
+
+		// "a minute ago", "an hour ago", "a day ago" ...
+		const aMatch = t.match(/^a(?:n)?\s+(minute|hour|day|month|year)s?\s+ago$/);
+		if (aMatch) {
+			switch (aMatch[1]) {
+				case 'minute': return 1 / 1440;
+				case 'hour':   return 1 / 24;
+				case 'day':    return 1;
+				case 'month':  return 30;
+				case 'year':   return 365;
+			}
 		}
+
+		// "N minute(s) ago", "N hour(s) ago", "N day(s) ago" ... (with or without "ago")
+		const numMatch = t.match(/^(\d+)\s*(minute|hour|day|month|year)s?(?:\s+ago)?$/);
+		if (numMatch) {
+			const n = parseInt(numMatch[1], 10);
+			switch (numMatch[2]) {
+				case 'minute': return n / 1440;
+				case 'hour':   return n / 24;
+				case 'day':    return n;
+				case 'month':  return n * 30;
+				case 'year':   return n * 365;
+			}
+		}
+
+		return null;
 	}
 
 	function shouldSkipCommentByDate(commentElement) {
@@ -394,6 +414,7 @@
 				log('shouldSkipCommentByDate: text="' + text + '" ageDays=' + age + ' preserveDays=' + daysToPreserve);
 				return age <= daysToPreserve;
 			}
+			log('shouldSkipCommentByDate: Unparseable text "' + text + '", trying datetime attribute');
 		}
 
 		// Strategy 2: fall back to datetime attribute parsing
@@ -422,7 +443,6 @@
 		if (!preserveDotComments) return false;
 
 		try {
-			// Narrow to the content area – prefer .usertext-body, fall back to .md
 			const body = commentElement.querySelector('.usertext-body');
 			const md = body || commentElement.querySelector('.md');
 			if (!md) {
@@ -430,29 +450,30 @@
 				return false;
 			}
 
-			// Use innerText so block elements (<p>, <li>, etc.) produce \n between them.
-			// textContent concatenates text nodes without separators, which makes dot-on-its-own-line
-			// detection impossible when Reddit minifies the HTML.
-			let raw = md.innerText || md.textContent || '';
-			if (!raw.trim()) {
-				log('shouldSkipCommentByDot: Empty comment text, not preserving');
+			// Check the last <p> element — avoids innerText phantom newlines
+			const ps = md.querySelectorAll('p');
+			if (ps.length) {
+				const last = ps[ps.length - 1].textContent.trim();
+				if (last === '.') {
+					log('shouldSkipCommentByDot: Preserving comment ending with dot');
+					return true;
+				}
 				return false;
 			}
 
+			// Fallback for non-paragraph content (lists, code blocks)
+			let raw = md.innerText || md.textContent || '';
+			if (!raw.trim()) return false;
 			raw = raw.replace(/\r\n?/g, '\n');
 			const lines = raw.split('\n')
 				.map(l => l.replace(/[\s\u00A0\u2000-\u200A\u202F\u205F\u3000]+/g, ''))
 				.filter(l => l.length > 0);
-			if (!lines.length) {
-				log('shouldSkipCommentByDot: No non-empty lines after cleaning, not preserving');
-				return false;
-			}
+			if (!lines.length) return false;
 
 			if (lines[lines.length - 1] === '.') {
-				log('shouldSkipCommentByDot: Preserving comment ending with dot');
+				log('shouldSkipCommentByDot: Preserving comment ending with dot (fallback)');
 				return true;
 			}
-
 			return false;
 		} catch (e) {
 			log('shouldSkipCommentByDot: Error:', e);
@@ -471,20 +492,25 @@
 				return false;
 			}
 
-			let raw = md.innerText || md.textContent || '';
-			if (!raw.trim()) {
-				log('shouldDeleteCommentByX: Empty comment text, not force-deleting');
+			// Check the last <p> element — avoids innerText phantom newlines
+			const ps = md.querySelectorAll('p');
+			if (ps.length) {
+				const last = ps[ps.length - 1].textContent.trim();
+				if (last === 'x') {
+					log('shouldDeleteCommentByX: Force-deleting comment ending with x');
+					return true;
+				}
 				return false;
 			}
 
+			// Fallback for non-paragraph content (lists, code blocks)
+			let raw = md.innerText || md.textContent || '';
+			if (!raw.trim()) return false;
 			raw = raw.replace(/\r\n?/g, '\n');
 			const lines = raw.split('\n')
 				.map(l => l.replace(/[\s\u00A0\u2000-\u200A\u202F\u205F\u3000]+/g, ''))
 				.filter(l => l.length > 0);
-			if (!lines.length) {
-				log('shouldDeleteCommentByX: No non-empty lines after cleaning, not force-deleting');
-				return false;
-			}
+			if (!lines.length) return false;
 
 			if (lines[lines.length - 1] === 'x') {
 				const matchIdx = lines.length - 1;
@@ -492,7 +518,6 @@
 				log('shouldDeleteCommentByX: Force-deleting — matched line:', JSON.stringify(lines[matchIdx]), 'context:', JSON.stringify(context));
 				return true;
 			}
-
 			return false;
 		} catch (e) {
 			log('shouldDeleteCommentByX: Error:', e);
