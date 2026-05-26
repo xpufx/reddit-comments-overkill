@@ -450,22 +450,22 @@ function showChecklist(categories) {
     let html = '';
     const makeGroup = (title, list, checkedByDefault) => {
       if (!list.length) return '';
-      html += '<div style="font-weight:bold;margin-top:12px;margin-bottom:4px;color:#333;font-size:14px;">' + title + ' (' + list.length + ')</div>';
+      let g = '<div style="font-weight:bold;margin-top:12px;margin-bottom:4px;color:#333;font-size:14px;">' + title + ' (' + list.length + ')</div>';
       for (const c of list) {
         const ageDays = ((Date.now() / 1000 - c.created_utc) / 86400).toFixed(0);
         const shortBody = c.body.replace(/<[^>]+>/g, '').replace(/&#[^;]+;/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 70);
         const isChecked = checked.has(c.name);
-        html += '<div style="display:flex;align-items:center;gap:6px;padding:2px 0;font-size:12px;">' +
+        g += '<div style="display:flex;align-items:center;gap:6px;padding:2px 0;font-size:12px;">' +
           '<input type="checkbox" ' + (checkedByDefault && isChecked ? 'checked' : '') +
           ' data-name="' + c.name + '" style="flex-shrink:0;">' +
           '<span style="color:#999;flex-shrink:0;width:40px;">' + ageDays + 'd</span>' +
           '<span style="color:#555;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">r/' + c.subreddit + ' ' + escapeHtml(shortBody) + '</span>' +
           '</div>';
       }
-      return html;
+      return g;
     };
 
-    html += makeGroup('Will be deleted (past date cutoff)', categories.deleteByDate, true);
+    html = makeGroup('Will be deleted (past date cutoff)', categories.deleteByDate, true);
     html += makeGroup('Will be deleted (force-delete via x)', categories.deleteByX, true);
     html += makeGroup('Preserved by age', categories.preserveAge, false);
     html += makeGroup('Preserved by dot', categories.preserveDot, false);
