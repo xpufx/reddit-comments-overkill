@@ -134,6 +134,7 @@ function getUsername() {
  * (Reused from main script)
  ******************************/
 function shouldSkipCommentByDate(createdUtc) {
+  if (createdUtc == null || isNaN(createdUtc)) return true; // can't determine age → preserve
   const ageDays = (Date.now() / 1000 - createdUtc) / 86400;
   return ageDays <= daysToPreserve;
 }
@@ -298,7 +299,7 @@ async function fetchCommentsBySort(sort, progressCb) {
 
     for (const child of children) {
       const d = child?.data;
-      if (!d) continue;
+      if (!d || d.created_utc == null) continue;
       if (seen.has(d.name)) continue;
       seen.add(d.name);
       comments.push({
