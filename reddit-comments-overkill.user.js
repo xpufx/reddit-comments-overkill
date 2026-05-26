@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Reddit Comments Overkill
 // @namespace    https://github.com/xpufx/reddit-comments-overkill
-// @version      2.56
+// @version      2.57
 // @description  Deletes all comments by cycling sorts reliably, retrying on rate limits, waiting for comments, handling infinite scroll & next page, with Start/Stop control.
 // @downloadURL  https://github.com/xpufx/reddit-comments-overkill/raw/refs/heads/main/reddit-comments-overkill.user.js
 // @updateURL    https://github.com/xpufx/reddit-comments-overkill/raw/refs/heads/main/reddit-comments-overkill.user.js
@@ -21,7 +21,7 @@
 	 * CONFIG
 	 ************************/
 	const SCRIPT_NAME = "Reddit Comments Overkill";
-	const VERSION = "2.56";
+	const VERSION = "2.57";
 	const LOGGING_ENABLED = true; // Set to false to disable console logging
 	const SORTS = ["new", "hot", "top", "controversial"];
 	const WAIT_FOR_COMMENTS_MS = 8000;
@@ -73,127 +73,51 @@
 		}
 	}
 
-	// Use URL parameter to maintain state across page reloads
-	// rco_sort presence indicates script is running
-	function getUrlState() {
-		const urlParams = new URLSearchParams(window.location.search);
-		const sortValue = urlParams.get('rco_sort');
-		return {
-			isRunning: sortValue !== null,
-			sortValue: sortValue
-		};
-	}
+	// All persistent state parameters — single source of truth
+	// Each entry: { key: "rco_xxx", get: () => currentValue, set: val => assignValue }
+	const STATE_PARAMS = [
+		{ key: 'rco_days',     get: () => daysToPreserve,        set: v => daysToPreserve = parseInt(v) || 10 },
+		{ key: 'rco_dot',      get: () => preserveDotComments,   set: v => preserveDotComments = v === 'true' },
+		{ key: 'rco_x',        get: () => xMeansDelete,          set: v => xMeansDelete = v === 'true' },
+		{ key: 'rco_dryrun',   get: () => dryRun,                set: v => dryRun = v === 'true' },
+		{ key: 'rco_simulate', get: () => simulate,              set: v => simulate = v === 'true' },
+	];
 
-	function getRunningStateFromUrl() {
-		return getUrlState().isRunning;
-	}
+	let running = false; // will be set by loadState()
 
-	function getSortFromUrl() {
-		return getUrlState().sortValue;
-	}
-
-	function getDaysFromUrl() {
-		const urlParams = new URLSearchParams(window.location.search);
-		const daysParam = urlParams.get('rco_days');
-		if (daysParam !== null) {
-			const days = parseInt(daysParam, 10);
-			return !isNaN(days) && days >= 0 ? days : 10; // default 10 if invalid
+	function loadState() {
+		const params = new URLSearchParams(window.location.search);
+		for (const p of STATE_PARAMS) {
+			const val = params.get(p.key);
+			if (val !== null) p.set(val);
 		}
-		return 10; // default
+		running = params.has('rco_sort');
 	}
 
-	function getDotPreservationFromUrl() {
-		const urlParams = new URLSearchParams(window.location.search);
-		const dotParam = urlParams.get('rco_dot');
-		if (dotParam !== null) {
-			return dotParam === 'true';
-		}
-		return true; // default
-	}
-
-	function getXMeansDeleteFromUrl() {
-		const urlParams = new URLSearchParams(window.location.search);
-		const xParam = urlParams.get('rco_x');
-		if (xParam !== null) {
-			return xParam === 'true';
-		}
-		return false; // opt-in
-	}
-
-	function getDryRunFromUrl() {
-		const urlParams = new URLSearchParams(window.location.search);
-		const dryRunParam = urlParams.get('rco_dryrun');
-		if (dryRunParam !== null) {
-			return dryRunParam === 'true';
-		}
-		return false; // default
-	}
-
-	function getSimulateFromUrl() {
-		const urlParams = new URLSearchParams(window.location.search);
-		const simParam = urlParams.get('rco_simulate');
-		if (simParam !== null) {
-			return simParam === 'true';
-		}
-		return false; // simulation off by default — enable via ?rco_simulate=true
-	}
-
-	function updateUrlState(isRunning, sortName, daysToPreserve, preserveDotComments, xMeansDelete, dryRun) {
-		const urlParams = new URLSearchParams(window.location.search);
-
-		if (isRunning && sortName) {
-			// Set rco_sort parameter
-			urlParams.set('rco_sort', sortName);
-			// Set rco_days parameter if provided
-			if (daysToPreserve !== undefined) {
-				urlParams.set('rco_days', daysToPreserve.toString());
+	function saveState(sortName) {
+		const params = new URLSearchParams();
+		if (sortName) {
+			params.set('rco_sort', sortName);
+			for (const p of STATE_PARAMS) {
+				params.set(p.key, String(p.get()));
 			}
-			// Set rco_dot parameter if provided
-			if (preserveDotComments !== undefined) {
-				urlParams.set('rco_dot', preserveDotComments.toString());
-			}
-			// Set rco_x parameter if provided
-			if (xMeansDelete !== undefined) {
-				urlParams.set('rco_x', xMeansDelete.toString());
-			}
-			// Set rco_dryrun parameter if provided
-			if (dryRun !== undefined) {
-				urlParams.set('rco_dryrun', dryRun.toString());
-			}
-			// Set rco_simulate parameter
-			urlParams.set('rco_simulate', simulate.toString());
-		} else {
-			// Remove parameters when not running
-			urlParams.delete('rco_sort');
-			urlParams.delete('rco_days');
-			urlParams.delete('rco_dot');
-			urlParams.delete('rco_x');
-			urlParams.delete('rco_dryrun');
-			urlParams.delete('rco_simulate');
 		}
-
-		// Update URL without reloading
-		const newUrl = window.location.pathname + (urlParams.toString() ? '?' + urlParams.toString() : '') + window.location.hash;
+		const newUrl = window.location.pathname + (params.toString() ? '?' + params.toString() : '') + window.location.hash;
 		history.replaceState({}, document.title, newUrl);
 	}
 
-	// Initialize running state from URL
-	let running = getRunningStateFromUrl();
-	daysToPreserve = getDaysFromUrl();
-	preserveDotComments = getDotPreservationFromUrl();
-	xMeansDelete = getXMeansDeleteFromUrl();
-	dryRun = getDryRunFromUrl();
-	simulate = getSimulateFromUrl();
+	function getParam(key) {
+		return new URLSearchParams(window.location.search).get(key);
+	}
 
-	// Debug logging
+	// Initialize state from URL
+	loadState();
 	log("Script loaded - URL parameters:", window.location.search);
 	log("Running state from URL:", running);
-	log("Current sort from URL:", getSortFromUrl());
-	log("Days to preserve from URL:", daysToPreserve);
-	log("Preserve dot comments from URL:", preserveDotComments);
-	log("X means delete from URL:", xMeansDelete);
-	log("Dry run mode from URL:", dryRun);
-	log("Simulate mode from URL:", simulate);
+	log("Current sort from URL:", getParam('rco_sort'));
+	for (const p of STATE_PARAMS) {
+		log(p.key + ":", String(p.get()));
+	}
 
 	// Progress tracking is no longer needed since we use URL parameters
 
@@ -342,8 +266,9 @@
 		u.searchParams.set("sort", sort);
 
 		// Preserve all rco state parameters across navigation
-		for (const key of ['rco_sort', 'rco_days', 'rco_dot', 'rco_dryrun', 'rco_simulate']) {
-			const val = new URLSearchParams(window.location.search).get(key);
+		const cur = new URLSearchParams(window.location.search);
+		for (const key of ['rco_sort', ...STATE_PARAMS.map(p => p.key)]) {
+			const val = cur.get(key);
 			if (val !== null) u.searchParams.set(key, val);
 		}
 
@@ -733,13 +658,13 @@
 		log("Processing all sorts:", activeSorts);
 
 		// Determine if we're starting fresh or resuming
-		const urlHasRunningState = getRunningStateFromUrl();
+		const urlHasRunningState = new URLSearchParams(window.location.search).has('rco_sort');
 		let idx = 0;
 
 		if (urlHasRunningState && !isFreshStart) {
 			// Actual resume: page loaded with URL params, no modal was shown
 			log("Resuming from URL state");
-			const urlSort = getSortFromUrl();
+			const urlSort = new URLSearchParams(window.location.search).get('rco_sort');
 			if (urlSort && activeSorts.includes(urlSort)) {
 				idx = activeSorts.indexOf(urlSort);
 				log("Resuming from sort:", urlSort, "at index:", idx);
@@ -801,7 +726,7 @@
 				if (idx >= activeSorts.length) {
 					log("ALL SELECTED SORTS PROCESSED — no more comments.");
 					running = false;
-					updateUrlState(false, '', undefined, preserveDotComments, xMeansDelete, dryRun);
+					saveState();
 			updateButtonState();
 			showCompleteOverlay();
 					log("All selected sorts completed, clearing state");
@@ -825,8 +750,8 @@
 					if (idx < activeSorts.length) {
 						nextSort = activeSorts[idx];
 					}
-					updateUrlState(running, nextSort, daysToPreserve, preserveDotComments, xMeansDelete, dryRun);
-					log("Updated URL state - running: " + running + ", next sort: " + nextSort);
+					saveState(nextSort);
+					log("Updated URL state - running: " + (!!nextSort) + ", next sort: " + nextSort);
 					// Update progress in status display
 				}
 
@@ -1079,7 +1004,7 @@
 
 			// Calculate starting sort and update URL
 			const currentSort = getCurrentSort();
-			updateUrlState(running, currentSort, daysToPreserve, preserveDotComments, xMeansDelete, dryRun);
+			saveState(currentSort);
 
 			// Clear persisted log for fresh start
 			persistedLog = [];
@@ -1279,7 +1204,7 @@
 		});
 		stopBtn.onclick = () => {
 			running = false;
-			updateUrlState(false, '', undefined, preserveDotComments, xMeansDelete, dryRun);
+			saveState();
 			hideOverlay();
 			hideBadge();
 		};
@@ -1357,7 +1282,7 @@
 	let mainRunning = false;
 
 	function updateButtonDisplay() {
-		btn.style.display = running || !getRunningStateFromUrl() ? 'flex' : 'none';
+		btn.style.display = running || !new URLSearchParams(window.location.search).has('rco_sort') ? 'flex' : 'none';
 	}
 
 	const btn = document.createElement("button");
@@ -1410,7 +1335,6 @@
 	`;
 	document.head.appendChild(pulseStyle);
 
-	running = getRunningStateFromUrl();
 	updateButtonState();
 	updateButtonDisplay();
 
@@ -1420,7 +1344,7 @@
 				log("A deletion session is already active, ignoring click");
 				return;
 			}
-			if (getRunningStateFromUrl()) {
+			if (new URLSearchParams(window.location.search).has('rco_sort')) {
 				running = true;
 				updateButtonState();
 				mainRunning = true;
@@ -1432,7 +1356,7 @@
 			}
 		} else {
 			running = false;
-			updateUrlState(false, '', undefined, preserveDotComments, xMeansDelete, dryRun);
+			saveState();
 			updateButtonState();
 			hideOverlay();
 			hideBadge();
@@ -1440,7 +1364,7 @@
 	};
 
 	// Auto-start if resuming from URL state
-	if (getRunningStateFromUrl()) {
+	if (running) {
 		log("Resuming from previous state");
 		running = true;
 		updateButtonState();
