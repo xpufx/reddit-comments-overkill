@@ -184,8 +184,8 @@ function showOverlay(title, statusHtml) {
 
   const panel = document.createElement('div');
   Object.assign(panel.style, {
-    background: '#fff', borderRadius: '10px', padding: '30px 40px',
-    width: '600px', minHeight: '300px', textAlign: 'center',
+    background: '#fff', borderRadius: '10px', padding: '20px 24px',
+    width: '480px', minHeight: '200px', maxHeight: '80vh', textAlign: 'center',
     boxShadow: '0 4px 20px rgba(0,0,0,0.3)',
     display: 'flex', flexDirection: 'column'
   });
@@ -211,7 +211,7 @@ function showOverlay(title, statusHtml) {
 
   overlayLogEl = document.createElement('div');
   Object.assign(overlayLogEl.style, {
-    fontSize: '11px', color: '#555', height: '200px', overflowY: 'auto',
+    fontSize: '11px', color: '#555', height: '120px', overflowY: 'auto',
     fontFamily: 'monospace', whiteSpace: 'pre-wrap', wordBreak: 'break-all',
     textAlign: 'left', background: '#f5f5f5', borderRadius: '4px', padding: '6px'
   });
@@ -222,17 +222,8 @@ function showOverlay(title, statusHtml) {
   panel.appendChild(overlayLogEl);
 
   const btnRow = document.createElement('div');
-  Object.assign(btnRow.style, { display: 'flex', gap: '10px', justifyContent: 'center', marginTop: '10px' });
-
-  const closeBtn = document.createElement('button');
-  closeBtn.textContent = 'Close';
-  Object.assign(closeBtn.style, {
-    padding: '8px 16px', background: '#888', color: '#fff',
-    border: 'none', borderRadius: '4px', fontSize: '13px', cursor: 'pointer'
-  });
-  closeBtn.onclick = hideOverlay;
-
-  btnRow.appendChild(closeBtn);
+  btnRow.className = 'rco-btn-row';
+  Object.assign(btnRow.style, { display: 'flex', gap: '10px', justifyContent: 'center', marginTop: '10px', minHeight: '36px' });
   panel.appendChild(btnRow);
   overlayEl.appendChild(panel);
   document.body.appendChild(overlayEl);
@@ -270,6 +261,7 @@ function showBadge() {
  ******************************/
 async function fetchCommentsBySort(sort, progressCb) {
   const comments = [];
+  const seen = new Set();
   let after = null;
   let page = 0;
 
@@ -307,6 +299,8 @@ async function fetchCommentsBySort(sort, progressCb) {
     for (const child of children) {
       const d = child?.data;
       if (!d) continue;
+      if (seen.has(d.name)) continue;
+      seen.add(d.name);
       comments.push({
         name: d.name,              // t1_xxx
         created_utc: d.created_utc, // Unix timestamp
@@ -484,7 +478,7 @@ function showChecklist(categories) {
     return html;
   }
 
-  overlayStatusEl.style.maxHeight = '400px';
+  overlayStatusEl.style.maxHeight = '250px';
   overlayStatusEl.style.overflowY = 'auto';
   overlayStatusEl.innerHTML = renderChecklist();
 
