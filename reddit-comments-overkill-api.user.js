@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Reddit Comments Overkill (API)
 // @namespace    https://github.com/xpufx/reddit-comments-overkill
-// @version      2.57-api
+// @version      2.57-api-2
 // @description  [TEST API] Fetches all comments via JSON API, shows checkbox list, deletes via /api/del
 // @downloadURL  https://github.com/xpufx/reddit-comments-overkill/raw/refs/heads/main/reddit-comments-overkill-api.user.js
 // @updateURL    https://github.com/xpufx/reddit-comments-overkill/raw/refs/heads/main/reddit-comments-overkill-api.user.js
@@ -18,7 +18,7 @@
  * CONFIG
  ******************************/
 const SCRIPT_NAME = 'Reddit Comments Overkill (API)';
-const VERSION = '2.57-api';
+const VERSION = '2.57-api-2';
 const LOGGING_ENABLED = true;
 const SORTS = ['new', 'hot', 'top', 'controversial'];
 const API_PAGE_LIMIT = 100;
