@@ -9,4 +9,4 @@ AGENTS.md
 node_modules/
 
 # Local test page dumps
-/test-page.html
+/test-page*.html
