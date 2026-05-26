@@ -1,15 +1,16 @@
 #!/usr/bin/env node
 // Regression test for date, dot, and x detection.
 // Usage:
-//   1. Save your Reddit comments page as test-page.html
-//   2. Run: node test.js
+//   1. Save your Reddit comments page as test-page.html (or pass filename as arg)
+//   2. Run: node test.js [filename]
 
 const fs = require('fs');
 
 // Config — matches script defaults
 const DAYS_TO_PRESERVE = 10;
 
-const html = fs.readFileSync('test-page.html', 'utf-8');
+const filename = process.argv[2] || 'test-page.html';
+const html = fs.readFileSync(filename, 'utf-8');
 const now = Date.now();
 const cutoff = now - DAYS_TO_PRESERVE * 86400000;
 

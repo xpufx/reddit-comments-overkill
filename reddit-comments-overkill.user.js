@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Reddit Comments Overkill
 // @namespace    https://github.com/xpufx/reddit-comments-overkill
-// @version      2.55
+// @version      2.56
 // @description  Deletes all comments by cycling sorts reliably, retrying on rate limits, waiting for comments, handling infinite scroll & next page, with Start/Stop control.
 // @downloadURL  https://github.com/xpufx/reddit-comments-overkill/raw/refs/heads/main/reddit-comments-overkill.user.js
 // @updateURL    https://github.com/xpufx/reddit-comments-overkill/raw/refs/heads/main/reddit-comments-overkill.user.js
@@ -21,7 +21,7 @@
 	 * CONFIG
 	 ************************/
 	const SCRIPT_NAME = "Reddit Comments Overkill";
-	const VERSION = "2.55";
+	const VERSION = "2.56";
 	const LOGGING_ENABLED = true; // Set to false to disable console logging
 	const SORTS = ["new", "hot", "top", "controversial"];
 	const WAIT_FOR_COMMENTS_MS = 8000;
@@ -386,39 +386,32 @@
 		return d.getTime() >= cutoff;
 	}
 
+	function loneLineCheck(md, char) {
+		// Walk all block-level children, check if any is just {char}
+		const blocks = md.querySelectorAll('p, li, pre, blockquote, h1, h2, h3, h4, h5, h6');
+		for (const b of blocks) {
+			if (b.textContent.trim() === char) return true;
+		}
+		// Fallback: walk text nodes via treewalker for edge cases
+		const walker = document.createTreeWalker(md, NodeFilter.SHOW_TEXT, null, false);
+		let node;
+		while (node = walker.nextNode()) {
+			const text = node.textContent.trim();
+			if (text === char) return true;
+		}
+		return false;
+	}
+
 	function shouldSkipCommentByDot(commentElement) {
 		if (!preserveDotComments) return false;
 
 		try {
 			const body = commentElement.querySelector('.usertext-body');
 			const md = body || commentElement.querySelector('.md');
-			if (!md) {
-				log('shouldSkipCommentByDot: No .md found, not preserving');
-				return false;
-			}
+			if (!md) return false;
 
-			// Check the last <p> element — avoids innerText phantom newlines
-			const ps = md.querySelectorAll('p');
-			if (ps.length) {
-				const last = ps[ps.length - 1].textContent.trim();
-				if (last === '.') {
-					log('shouldSkipCommentByDot: Preserving comment ending with dot');
-					return true;
-				}
-				return false;
-			}
-
-			// Fallback for non-paragraph content (lists, code blocks)
-			let raw = md.innerText || md.textContent || '';
-			if (!raw.trim()) return false;
-			raw = raw.replace(/\r\n?/g, '\n');
-			const lines = raw.split('\n')
-				.map(l => l.replace(/[\s\u00A0\u2000-\u200A\u202F\u205F\u3000]+/g, ''))
-				.filter(l => l.length > 0);
-			if (!lines.length) return false;
-
-			if (lines[lines.length - 1] === '.') {
-				log('shouldSkipCommentByDot: Preserving comment ending with dot (fallback)');
+			if (loneLineCheck(md, '.')) {
+				log('shouldSkipCommentByDot: Preserving comment ending with dot');
 				return true;
 			}
 			return false;
@@ -434,35 +427,10 @@
 		try {
 			const body = commentElement.querySelector('.usertext-body');
 			const md = body || commentElement.querySelector('.md');
-			if (!md) {
-				log('shouldDeleteCommentByX: No .md found, not force-deleting');
-				return false;
-			}
+			if (!md) return false;
 
-			// Check the last <p> element — avoids innerText phantom newlines
-			const ps = md.querySelectorAll('p');
-			if (ps.length) {
-				const last = ps[ps.length - 1].textContent.trim();
-				if (last === 'x') {
-					log('shouldDeleteCommentByX: Force-deleting comment ending with x');
-					return true;
-				}
-				return false;
-			}
-
-			// Fallback for non-paragraph content (lists, code blocks)
-			let raw = md.innerText || md.textContent || '';
-			if (!raw.trim()) return false;
-			raw = raw.replace(/\r\n?/g, '\n');
-			const lines = raw.split('\n')
-				.map(l => l.replace(/[\s\u00A0\u2000-\u200A\u202F\u205F\u3000]+/g, ''))
-				.filter(l => l.length > 0);
-			if (!lines.length) return false;
-
-			if (lines[lines.length - 1] === 'x') {
-				const matchIdx = lines.length - 1;
-				const context = lines.slice(Math.max(0, matchIdx - 1), matchIdx + 2).join(' | ');
-				log('shouldDeleteCommentByX: Force-deleting — matched line:', JSON.stringify(lines[matchIdx]), 'context:', JSON.stringify(context));
+			if (loneLineCheck(md, 'x')) {
+				log('shouldDeleteCommentByX: Force-deleting comment ending with x');
 				return true;
 			}
 			return false;
@@ -488,16 +456,16 @@
 					return true; // If we can't find the comment element, include the button
 				}
 
-				// Check if this comment should be skipped based on date, dot preservation, or x force-delete
+				// Check if this comment should be skipped based on date or dot preservation
 				const skipByDate = shouldSkipCommentByDate(commentElement);
 				const skipByDot = shouldSkipCommentByDot(commentElement);
+				const shouldSkip = skipByDot || skipByDate;
 				const forceDeleteByX = shouldDeleteCommentByX(commentElement);
-				const shouldSkip = skipByDot || (skipByDate && !forceDeleteByX);
 
 				if (shouldSkip) {
-					log(`getDeleteButtons: Skipping comment (date: ${skipByDate}, dot: ${skipByDot}, x-override: ${forceDeleteByX})`);
+					log(`getDeleteButtons: Skipping comment (date: ${skipByDate}, dot: ${skipByDot}, x-detected: ${forceDeleteByX})`);
 				} else if (forceDeleteByX) {
-					log(`getDeleteButtons: Including comment via x-override despite age`);
+					log(`getDeleteButtons: Including comment via x-override`);
 				}
 
 				return !shouldSkip;
