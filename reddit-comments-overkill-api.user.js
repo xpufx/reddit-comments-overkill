@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Reddit Comments Overkill (API)
 // @namespace    https://github.com/xpufx/reddit-comments-overkill
-// @version      2.57-api-3
+// @version      2.57-api-4
 // @description  [TEST API] Fetches all comments via JSON API, shows checkbox list, deletes via /api/del
 // @downloadURL  https://github.com/xpufx/reddit-comments-overkill/raw/refs/heads/main/reddit-comments-overkill-api.user.js
 // @updateURL    https://github.com/xpufx/reddit-comments-overkill/raw/refs/heads/main/reddit-comments-overkill-api.user.js
@@ -18,7 +18,7 @@
  * CONFIG
  ******************************/
 const SCRIPT_NAME = 'Reddit Comments Overkill (API)';
-const VERSION = '2.57-api-3';
+const VERSION = '2.57-api-4';
 const LOGGING_ENABLED = true;
 const SORTS = ['new', 'hot', 'top', 'controversial'];
 const API_PAGE_LIMIT = 100;
@@ -440,9 +440,30 @@ async function runDeletions(comments, progressCb) {
 function showChecklist(categories) {
   if (!overlayEl) showOverlay();
 
-  // Clear the status area and show checklist
   const allDelete = [...categories.deleteByDate, ...categories.deleteByX];
   const totalDelete = allDelete.length;
+
+  // Nothing to delete — show completion immediately
+  if (totalDelete === 0) {
+    overlayStatusEl.style.maxHeight = '';
+    overlayStatusEl.style.overflowY = '';
+    overlayStatusEl.innerHTML =
+      '<span style="font-size:24px;color:#2e7d32">&#10003;</span> ' +
+      '<strong style="color:#2e7d32">Complete! v' + VERSION + '</strong><br>' +
+      'No comments to delete.';
+    const btnRow = overlayEl.querySelector('.rco-btn-row');
+    if (btnRow) {
+      btnRow.innerHTML = '';
+      const okBtn = document.createElement('button');
+      okBtn.textContent = 'OK';
+      Object.assign(okBtn.style, { padding: '8px 20px', background: '#2e7d32', color: '#fff',
+        border: 'none', borderRadius: '4px', fontSize: '14px', fontWeight: 'bold', cursor: 'pointer' });
+      okBtn.onclick = hideOverlay;
+      btnRow.appendChild(okBtn);
+    }
+    return;
+  }
+
   const checked = new Set(allDelete.map(c => c.name));
 
   function renderChecklist() {
