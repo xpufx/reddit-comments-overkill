@@ -23,6 +23,22 @@ if [ -f "test.js" ]; then
 	fi
 fi
 
+# Check and inline @require detection.js into all .user.js files
+for f in reddit-comments-overkill*.user.js; do
+	if grep -q '@require.*detection\.js' "$f" 2>/dev/null; then
+		echo "  Inlining detection.js into $f..."
+		detection=$(cat src/detection.js)
+		# Remove the module.exports line for userscript compatibility
+		detection=$(echo "$detection" | grep -v 'module.exports')
+		# Remove @require line and insert inlined functions after // ==/UserScript==
+		sed -i '/@require.*detection\.js/d' "$f"
+		sed -i "s|// ==/UserScript==|// ==/UserScript==\n\n// detection.js (inlined by release.sh)\n$detection|" "$f"
+		# Verify syntax
+		node -e "new Function($(node -e "console.log(JSON.stringify(require('fs').readFileSync('$f','utf-8').replace(/^\/\/.*\n?/gm,'')))")); console.log('  Syntax OK')"
+		echo "  $f ready"
+	fi
+done
+
 # 1. Extract versions
 meta_ver=$(grep -oP '// @version\s+\K\S+' "$SCRIPT")
 const_ver=$(grep -oP 'const VERSION\s*=\s*"\K[^"]+' "$SCRIPT")

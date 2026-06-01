@@ -10,6 +10,7 @@
 // STILL Old Reddit but with RES etc that displays all reddit on the normal address
 // @match        https://www.reddit.com/user/*/comments*
 // @grant        none
+// @require      https://github.com/xpufx/reddit-comments-overkill/raw/refs/heads/main/src/detection.js
 // @run-at       document-idle
 // ==/UserScript==
 
