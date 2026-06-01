@@ -12,6 +12,17 @@ done
 
 echo "=== Release check ==="
 
+# 0. Run regression tests against all samples
+if [ -f "test.js" ]; then
+	echo "  Running regression tests..."
+	if node test.js; then
+		echo "  Tests passed"
+	else
+		echo "  ERROR: Regression tests failed"
+		exit 1
+	fi
+fi
+
 # 1. Extract versions
 meta_ver=$(grep -oP '// @version\s+\K\S+' "$SCRIPT")
 const_ver=$(grep -oP 'const VERSION\s*=\s*"\K[^"]+' "$SCRIPT")
