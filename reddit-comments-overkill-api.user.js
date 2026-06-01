@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Reddit Comments Overkill (API)
 // @namespace    https://github.com/xpufx/reddit-comments-overkill
-// @version      2.59-api-5
+// @version      2.60-api-5
 // @description  [TEST API] Fetches all comments via JSON API, shows checkbox list, deletes via /api/del
 // @downloadURL  https://github.com/xpufx/reddit-comments-overkill/raw/refs/heads/main/reddit-comments-overkill-api.user.js
 // @updateURL    https://github.com/xpufx/reddit-comments-overkill/raw/refs/heads/main/reddit-comments-overkill-api.user.js
@@ -43,7 +43,7 @@ function shouldDeleteCommentByX(text, xMeansDelete) {
  * CONFIG
  ******************************/
 const SCRIPT_NAME = 'Reddit Comments Overkill (API)';
-const VERSION = '2.59-api-4';
+const VERSION = '2.60-api-4';
 const LOGGING_ENABLED = true;
 const SORTS = ['new', 'hot', 'top', 'controversial'];
 const API_PAGE_LIMIT = 100;
@@ -272,7 +272,7 @@ async function fetchCommentsBySort(sort, progressCb) {
     url.searchParams.set('limit', String(API_PAGE_LIMIT));
     if (after) url.searchParams.set('after', after);
 
-    if (progressCb) progressCb(sort, page, url.toString());
+    if (progressCb) progressCb(sort);
 
     let resp;
     try {
@@ -335,7 +335,7 @@ async function fetchAllComments(progressCb) {
       }
     }
     log('  Got ' + sorted.length + ', ' + added + ' new unique');
-    if (progressCb) progressCb('_done', sort, sorted.length, added, all.length);
+    if (progressCb) progressCb(sort, all.length);
     if (sort !== SORTS[SORTS.length - 1]) await sleep(SORT_DELAY_MS);
   }
 
@@ -573,17 +573,11 @@ function showFetchProgress() {
   );
 }
 
-function updateFetchProgress(sort, page, url, added, totalUnique) {
+function updateFetchProgress(sort, totalUnique) {
   const el = document.getElementById('rco-fetch-status');
   if (!el) return;
-  let html = '';
-  for (const s of SORTS) {
-    const active = sort === s ? ' <span style="color:#d00;">⟳</span>' : ' <span style="color:#999;">✓</span>';
-    html += '<div>' + s + active + '</div>';
-  }
-  html += '<div style="margin-top:8px;color:#555;">Total unique comments so far: ' + totalUnique + '</div>';
-  if (added !== undefined) html += '<div style="color:#888;font-size:12px;">+ ' + added + ' new from ' + sort + '</div>';
-  el.innerHTML = html;
+  const parts = SORTS.map(s => s + (sort === s ? ' ⟳' : ' ✓'));
+  el.textContent = 'Fetching: ' + parts.join('  ') + (totalUnique ? '  |  ' + totalUnique + ' unique' : '');
 }
 
 /*******************************
@@ -699,12 +693,8 @@ async function startFetchAndDelete() {
 
   showFetchProgress();
 
-  const progressCb = (sort, page, url, added, totalUnique) => {
-    if (sort === '_done') {
-      updateFetchProgress(page, 0, url, added, totalUnique);
-    } else {
-      updateFetchProgress(sort, page, url, 0, 0);
-    }
+  const progressCb = (sort, totalUnique) => {
+    updateFetchProgress(sort, totalUnique);
   };
 
   log('Starting fetch for username: ' + getUsername());
