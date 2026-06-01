@@ -81,6 +81,10 @@ if git tag -l "v$meta_ver" | grep -q .; then
 	exit 1
 fi
 
+# 5. Commit all changes (bump + inlining)
+git add -A
+git commit -m "bump v$new_ver" || true # no-op if nothing to commit
+
 echo
 echo "Reminder: update README if new features were added."
 echo "Tip: use --no-block to skip this prompt next time."
