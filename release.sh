@@ -12,7 +12,23 @@ done
 
 echo "=== Release check ==="
 
-# 0. Run regression tests against all samples
+# 0. Auto-bump version in all .user.js files
+old_ver=$(grep -oP '// @version\s+\K[\d.]+' "$SCRIPT")
+new_ver=$(echo "$old_ver" | awk -F. '{print $1"."$2+1}')
+echo "  Bumping version: $old_ver → $new_ver"
+
+for f in reddit-comments-overkill*.user.js; do
+	sed -i -r "s|(@version\s+)$old_ver|\1$new_ver|" "$f"
+	sed -i -r "s|(const VERSION\s*=\s*['\"])$old_ver|\1$new_ver|" "$f"
+done
+
+for f in reddit-comments-overkill*.user.js; do
+	v=$(grep -oP '// @version\s+\K\S+' "$f" || echo '?')
+	c=$(grep -oP 'const VERSION\s*=\s*"\K[^"]+' "$f" || grep -oP "const VERSION\s*=\s*'\K[^']+" "$f" || echo '?')
+	echo "  $f: @version=$v VERSION=$c"
+done
+
+# 1. Run regression tests against all samples
 if [ -f "test.js" ]; then
 	echo "  Running regression tests..."
 	if node test.js; then
@@ -27,14 +43,16 @@ fi
 for f in reddit-comments-overkill*.user.js; do
 	if grep -q '@require.*detection\.js' "$f" 2>/dev/null; then
 		echo "  Inlining detection.js into $f..."
-		detection=$(cat src/detection.js)
-		# Remove the module.exports line for userscript compatibility
-		detection=$(echo "$detection" | grep -v 'module.exports')
-		# Remove @require line and insert inlined functions after // ==/UserScript==
-		sed -i '/@require.*detection\.js/d' "$f"
-		sed -i "s|// ==/UserScript==|// ==/UserScript==\n\n// detection.js (inlined by release.sh)\n$detection|" "$f"
-		# Verify syntax
-		node -e "new Function($(node -e "console.log(JSON.stringify(require('fs').readFileSync('$f','utf-8').replace(/^\/\/.*\n?/gm,'')))")); console.log('  Syntax OK')"
+		node -e "
+var fs = require('fs');
+var detection = fs.readFileSync('src/detection.js','utf-8').split('\n').filter(function(l){return !/module\.exports/.test(l)}).join('\n');
+var content = fs.readFileSync('$f','utf-8');
+content = content.replace(/\/\/ @require.*detection\.js.*\n/, '');
+content = content.replace('// ==/UserScript==', '// ==/UserScript==\n\n' + detection);
+fs.writeFileSync('$f', content);
+try { new Function(content.replace(/^\/\/.*\n?/gm,'')); console.log('  Syntax OK'); }
+catch(e) { console.log('  FAIL:', e.message); process.exit(1); }
+"
 		echo "  $f ready"
 	fi
 done

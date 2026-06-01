@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Reddit Comments Overkill (No Redirect)
 // @namespace    https://github.com/xpufx/reddit-comments-overkill
-// @version      2.57-test1
+// @version      2.58-test1
 // @description  [TEST] Same as main script but fetches sort pages without browser redirect — no flash, console preserved
 // @downloadURL  https://github.com/xpufx/reddit-comments-overkill/raw/refs/heads/main/reddit-comments-overkill-noredirect.user.js
 // @updateURL    https://github.com/xpufx/reddit-comments-overkill/raw/refs/heads/main/reddit-comments-overkill-noredirect.user.js
@@ -10,9 +10,33 @@
 // STILL Old Reddit but with RES etc that displays all reddit on the normal address
 // @match        https://www.reddit.com/user/*/comments*
 // @grant        none
-// @require      https://github.com/xpufx/reddit-comments-overkill/raw/refs/heads/main/src/detection.js
 // @run-at       document-idle
 // ==/UserScript==
+
+// Shared detection logic — used by both userscripts and test.js.
+// During development: scripts @require this file.
+// On release: release.sh inlines it into the .user.js bundle.
+
+function shouldSkipCommentByDate(createdUtc, daysToPreserve) {
+  if (createdUtc == null || isNaN(createdUtc)) return true;
+  return (Date.now() / 1000 - createdUtc) / 86400 <= daysToPreserve;
+}
+
+function loneLineCheck(text, char) {
+  if (!text) return false;
+  const lines = text.split('\n').map(l => l.trim()).filter(l => l.length > 0);
+  return lines.some(l => l === char);
+}
+
+function shouldSkipCommentByDot(text, preserveDotComments) {
+  return preserveDotComments && loneLineCheck(text, '.');
+}
+
+function shouldDeleteCommentByX(text, xMeansDelete) {
+  return xMeansDelete && loneLineCheck(text, 'x');
+}
+
+
 
 
 (function() {
@@ -22,7 +46,7 @@
 	 * CONFIG
 	 ************************/
 	const SCRIPT_NAME = "Reddit Comments Overkill";
-	const VERSION = "2.57";
+	const VERSION = "2.58";
 	const LOGGING_ENABLED = true; // Set to false to disable console logging
 	const SORTS = ["new", "hot", "top", "controversial"];
 	const WAIT_FOR_COMMENTS_MS = 8000;

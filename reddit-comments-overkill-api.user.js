@@ -1,16 +1,40 @@
 // ==UserScript==
 // @name         Reddit Comments Overkill (API)
 // @namespace    https://github.com/xpufx/reddit-comments-overkill
-// @version      2.57-api-4
+// @version      2.58-api-4
 // @description  [TEST API] Fetches all comments via JSON API, shows checkbox list, deletes via /api/del
 // @downloadURL  https://github.com/xpufx/reddit-comments-overkill/raw/refs/heads/main/reddit-comments-overkill-api.user.js
 // @updateURL    https://github.com/xpufx/reddit-comments-overkill/raw/refs/heads/main/reddit-comments-overkill-api.user.js
 // @match        https://www.reddit.com/user/*/comments*
 // @match        https://old.reddit.com/user/*/comments*
 // @grant        none
-// @require      https://github.com/xpufx/reddit-comments-overkill/raw/refs/heads/main/src/detection.js
 // @run-at       document-idle
 // ==/UserScript==
+
+// Shared detection logic — used by both userscripts and test.js.
+// During development: scripts @require this file.
+// On release: release.sh inlines it into the .user.js bundle.
+
+function shouldSkipCommentByDate(createdUtc, daysToPreserve) {
+  if (createdUtc == null || isNaN(createdUtc)) return true;
+  return (Date.now() / 1000 - createdUtc) / 86400 <= daysToPreserve;
+}
+
+function loneLineCheck(text, char) {
+  if (!text) return false;
+  const lines = text.split('\n').map(l => l.trim()).filter(l => l.length > 0);
+  return lines.some(l => l === char);
+}
+
+function shouldSkipCommentByDot(text, preserveDotComments) {
+  return preserveDotComments && loneLineCheck(text, '.');
+}
+
+function shouldDeleteCommentByX(text, xMeansDelete) {
+  return xMeansDelete && loneLineCheck(text, 'x');
+}
+
+
 
 (function() {
 "use strict";
@@ -19,7 +43,7 @@
  * CONFIG
  ******************************/
 const SCRIPT_NAME = 'Reddit Comments Overkill (API)';
-const VERSION = '2.57-api-4';
+const VERSION = '2.58-api-4';
 const LOGGING_ENABLED = true;
 const SORTS = ['new', 'hot', 'top', 'controversial'];
 const API_PAGE_LIMIT = 100;
