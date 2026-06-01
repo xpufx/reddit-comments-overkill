@@ -489,12 +489,6 @@ function showChecklist(categories) {
     html += makeGroup('Preserved by age', categories.preserveAge, false);
     html += makeGroup('Preserved by dot', categories.preserveDot, false);
 
-    const checkedCount = allDelete.filter(c => checked.has(c.name)).length;
-    html += '<div style="margin-top:16px;padding-top:12px;border-top:1px solid #eee;display:flex;gap:10px;justify-content:center;">' +
-      '<button id="rco-cancel-btn" style="padding:8px 20px;background:#888;color:#fff;border:none;border-radius:4px;cursor:pointer;">Cancel</button>' +
-      '<button id="rco-delete-btn" style="padding:8px 20px;background:#d00;color:#fff;border:none;border-radius:4px;cursor:pointer;font-weight:bold;">Delete ' + checkedCount + '</button>' +
-      '</div>';
-
     return html;
   }
 
@@ -502,40 +496,47 @@ function showChecklist(categories) {
   overlayStatusEl.style.overflowY = 'auto';
   overlayStatusEl.innerHTML = renderChecklist();
 
-  // Wire up checkbox toggle
-  overlayStatusEl.addEventListener('change', (e) => {
-    if (e.target.type === 'checkbox' && e.target.dataset.name) {
-      if (e.target.checked) checked.add(e.target.dataset.name);
-      else checked.delete(e.target.dataset.name);
-      const btn = document.getElementById('rco-delete-btn');
-      if (btn) btn.textContent = 'Delete ' + checked.size;
+  // Populate button row (below the checklist, outside scroll area)
+  const btnRow = overlayEl.querySelector('.rco-btn-row');
+  if (btnRow) {
+    btnRow.innerHTML = '';
+    const cancelBtn = document.createElement('button');
+    cancelBtn.textContent = 'Cancel';
+    Object.assign(cancelBtn.style, { padding: '8px 20px', background: '#888', color: '#fff',
+      border: 'none', borderRadius: '4px', cursor: 'pointer' });
+    cancelBtn.onclick = hideOverlay;
+
+    const deleteBtn = document.createElement('button');
+    function updateDeleteBtn() {
+      deleteBtn.textContent = 'Delete ' + checked.size;
     }
-  });
+    deleteBtn.textContent = 'Delete ' + checked.size;
+    Object.assign(deleteBtn.style, { padding: '8px 20px', background: '#d00', color: '#fff',
+      border: 'none', borderRadius: '4px', cursor: 'pointer', fontWeight: 'bold' });
+    deleteBtn.onclick = async () => {
+      const toDelete = allDelete.filter(c => checked.has(c.name));
+      if (!toDelete.length) { hideOverlay(); return; }
 
-  document.getElementById('rco-cancel-btn')?.addEventListener('click', hideOverlay);
-  document.getElementById('rco-delete-btn')?.addEventListener('click', async () => {
-    const toDelete = allDelete.filter(c => checked.has(c.name));
-    if (!toDelete.length) { hideOverlay(); return; }
+      // Hide buttons during deletion
+      btnRow.innerHTML = '';
 
-    // Switch to progress view
-    overlayStatusEl.style.maxHeight = '';
-    overlayStatusEl.style.overflowY = '';
-    overlayStatusEl.innerHTML += '<br><br>Deleting ' + toDelete.length + ' comments...<br>Progress: 0 / ' + toDelete.length;
+      // Switch to progress view
+      overlayStatusEl.style.maxHeight = '';
+      overlayStatusEl.style.overflowY = '';
+      overlayStatusEl.innerHTML += '<br><br>Deleting ' + toDelete.length + ' comments...<br>Progress: 0 / ' + toDelete.length;
 
-    const deleted = await runDeletions(toDelete, (done, total, last) => {
-      if (overlayStatusEl) overlayStatusEl.innerHTML += '<br>Progress: ' + done + ' / ' + total;
-    });
+      const deleted = await runDeletions(toDelete, (done, total, last) => {
+        if (overlayStatusEl) overlayStatusEl.innerHTML += '<br>Progress: ' + done + ' / ' + total;
+      });
 
-    // Append completion — doesn't clear anything
-    if (overlayStatusEl) {
-      overlayStatusEl.innerHTML += '<br><br><span style="font-size:24px;color:#2e7d32">&#10003;</span> ' +
-        '<strong style="color:#2e7d32">Complete! v' + VERSION + '</strong> ' +
-        deleted + ' comments deleted.';
-    }
+      // Append completion
+      if (overlayStatusEl) {
+        overlayStatusEl.innerHTML += '<br><br><span style="font-size:24px;color:#2e7d32">&#10003;</span> ' +
+          '<strong style="color:#2e7d32">Complete! v' + VERSION + '</strong> ' +
+          deleted + ' comments deleted.';
+      }
 
-    // Add OK button to existing button row
-    const btnRow = overlayEl.querySelector('.rco-btn-row');
-    if (btnRow) {
+      // Add OK button
       const okBtn = document.createElement('button');
       okBtn.textContent = 'OK';
       Object.assign(okBtn.style, {
@@ -545,8 +546,20 @@ function showChecklist(categories) {
       });
       okBtn.onclick = hideOverlay;
       btnRow.appendChild(okBtn);
-    }
-  });
+    };
+
+    // Wire up checkbox change to update delete button count
+    overlayStatusEl.addEventListener('change', (e) => {
+      if (e.target.type === 'checkbox' && e.target.dataset.name) {
+        if (e.target.checked) checked.add(e.target.dataset.name);
+        else checked.delete(e.target.dataset.name);
+        deleteBtn.textContent = 'Delete ' + checked.size;
+      }
+    });
+
+    btnRow.appendChild(cancelBtn);
+    btnRow.appendChild(deleteBtn);
+  }
 }
 
 /*******************************
