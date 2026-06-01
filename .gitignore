@@ -10,3 +10,5 @@ node_modules/
 
 # Local test page dumps
 /test-page*.html
+/test-sample*.html
+/temp/*.html
