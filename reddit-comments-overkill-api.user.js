@@ -8,6 +8,7 @@
 // @match        https://www.reddit.com/user/*/comments*
 // @match        https://old.reddit.com/user/*/comments*
 // @grant        none
+// @require      https://github.com/xpufx/reddit-comments-overkill/raw/refs/heads/main/src/detection.js
 // @run-at       document-idle
 // ==/UserScript==
 
@@ -126,32 +127,6 @@ const threadSleep = ms => new Promise(r => setTimeout(r, ms));
 function getUsername() {
   const m = location.pathname.match(/\/user\/([^\/]+)/);
   return m ? m[1] : null;
-}
-
-/*******************************
- * DATE / DOT / X DETECTION
- * (Reused from main script)
- ******************************/
-function shouldSkipCommentByDate(createdUtc) {
-  if (createdUtc == null || isNaN(createdUtc)) return true; // can't determine age → preserve
-  const ageDays = (Date.now() / 1000 - createdUtc) / 86400;
-  return ageDays <= daysToPreserve;
-}
-
-function loneLineCheck(text, char) {
-  if (!text) return false;
-  const lines = text.split('\n').map(l => l.trim()).filter(l => l.length > 0);
-  return lines.some(l => l === char);
-}
-
-function shouldSkipCommentByDot(text) {
-  if (!preserveDotComments) return false;
-  return loneLineCheck(text, '.');
-}
-
-function shouldDeleteCommentByX(text) {
-  if (!xMeansDelete) return false;
-  return loneLineCheck(text, 'x');
 }
 
 /*******************************
@@ -355,9 +330,9 @@ function categorizeComments(comments) {
   };
 
   for (const c of comments) {
-    const byDate = shouldSkipCommentByDate(c.created_utc);
-    const byDot = shouldSkipCommentByDot(c.body);
-    const byX = shouldDeleteCommentByX(c.body);
+    const byDate = shouldSkipCommentByDate(c.created_utc, daysToPreserve);
+    const byDot = shouldSkipCommentByDot(c.body, preserveDotComments);
+    const byX = shouldDeleteCommentByX(c.body, xMeansDelete);
 
     if (byDot) {
       categorized.preserveDot.push(c);
