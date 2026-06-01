@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Reddit Comments Overkill (API)
 // @namespace    https://github.com/xpufx/reddit-comments-overkill
-// @version      2.60-api-5
+// @version      2.61-api-5
 // @description  [TEST API] Fetches all comments via JSON API, shows checkbox list, deletes via /api/del
 // @downloadURL  https://github.com/xpufx/reddit-comments-overkill/raw/refs/heads/main/reddit-comments-overkill-api.user.js
 // @updateURL    https://github.com/xpufx/reddit-comments-overkill/raw/refs/heads/main/reddit-comments-overkill-api.user.js
@@ -43,7 +43,7 @@ function shouldDeleteCommentByX(text, xMeansDelete) {
  * CONFIG
  ******************************/
 const SCRIPT_NAME = 'Reddit Comments Overkill (API)';
-const VERSION = '2.60-api-4';
+const VERSION = '2.61-api-4';
 const LOGGING_ENABLED = true;
 const SORTS = ['new', 'hot', 'top', 'controversial'];
 const API_PAGE_LIMIT = 100;
@@ -507,43 +507,54 @@ function showChecklist(categories) {
     cancelBtn.onclick = hideOverlay;
 
     const deleteBtn = document.createElement('button');
-    function updateDeleteBtn() {
-      deleteBtn.textContent = 'Delete ' + checked.size;
-    }
     deleteBtn.textContent = 'Delete ' + checked.size;
     Object.assign(deleteBtn.style, { padding: '8px 20px', background: '#d00', color: '#fff',
       border: 'none', borderRadius: '4px', cursor: 'pointer', fontWeight: 'bold' });
     deleteBtn.onclick = async () => {
       const toDelete = allDelete.filter(c => checked.has(c.name));
-      if (!toDelete.length) { hideOverlay(); return; }
 
-      // Hide buttons during deletion
+      // Hide all buttons during deletion
       btnRow.innerHTML = '';
+
+      if (!toDelete.length) {
+        overlayStatusEl.innerHTML += '<br><br>Nothing to delete.';
+        const okBtn = document.createElement('button');
+        okBtn.textContent = 'OK';
+        Object.assign(okBtn.style, { padding: '8px 20px', background: '#2e7d32', color: '#fff',
+          border: 'none', borderRadius: '4px', fontSize: '14px', fontWeight: 'bold', cursor: 'pointer' });
+        okBtn.onclick = hideOverlay;
+        btnRow.appendChild(okBtn);
+        return;
+      }
 
       // Switch to progress view
       overlayStatusEl.style.maxHeight = '';
       overlayStatusEl.style.overflowY = '';
+
       overlayStatusEl.innerHTML += '<br><br>Deleting ' + toDelete.length + ' comments...<br>Progress: 0 / ' + toDelete.length;
 
-      const deleted = await runDeletions(toDelete, (done, total, last) => {
-        if (overlayStatusEl) overlayStatusEl.innerHTML += '<br>Progress: ' + done + ' / ' + total;
-      });
+      let deleted = 0;
+      try {
+        deleted = await runDeletions(toDelete, (done, total) => {
+          if (overlayStatusEl) overlayStatusEl.innerHTML += '<br>Progress: ' + done + ' / ' + total;
+        });
+      } catch (e) {
+        log('Deletion error:', e);
+        if (overlayStatusEl) overlayStatusEl.innerHTML += '<br>Error: ' + e.message;
+      }
 
       // Append completion
       if (overlayStatusEl) {
         overlayStatusEl.innerHTML += '<br><br><span style="font-size:24px;color:#2e7d32">&#10003;</span> ' +
-          '<strong style="color:#2e7d32">Complete! v' + VERSION + '</strong> ' +
+          '<strong style="color:#2e7d32">Done. v' + VERSION + '</strong> ' +
           deleted + ' comments deleted.';
       }
 
-      // Add OK button
+      // Add OK button (always, even on error)
       const okBtn = document.createElement('button');
       okBtn.textContent = 'OK';
-      Object.assign(okBtn.style, {
-        padding: '8px 20px', background: '#2e7d32', color: '#fff',
-        border: 'none', borderRadius: '4px', fontSize: '14px',
-        fontWeight: 'bold', cursor: 'pointer'
-      });
+      Object.assign(okBtn.style, { padding: '8px 20px', background: '#2e7d32', color: '#fff',
+        border: 'none', borderRadius: '4px', fontSize: '14px', fontWeight: 'bold', cursor: 'pointer' });
       okBtn.onclick = hideOverlay;
       btnRow.appendChild(okBtn);
     };
