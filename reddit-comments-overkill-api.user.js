@@ -442,11 +442,14 @@ async function runDeletions(comments, progressCb) {
 function showChecklist(categories) {
   if (!overlayEl) showOverlay();
 
-  const allDelete = [...categories.deleteByDate, ...categories.deleteByX];
-  const totalDelete = allDelete.length;
+  const allComments = [
+    ...categories.deleteByDate,
+    ...categories.deleteByX,
+    ...categories.preserveAge,
+    ...categories.preserveDot
+  ];
 
-  // Nothing to delete — show completion immediately
-  if (totalDelete === 0) {
+  if (!allComments.length) {
     overlayStatusEl.style.maxHeight = '';
     overlayStatusEl.style.overflowY = '';
     overlayStatusEl.innerHTML =
@@ -466,7 +469,12 @@ function showChecklist(categories) {
     return;
   }
 
-  const checked = new Set(allDelete.map(c => c.name));
+  // Initially checked: delete candidates. Unchecked: preserved.
+  const defaultChecked = new Set([
+    ...categories.deleteByDate.map(c => c.name),
+    ...categories.deleteByX.map(c => c.name)
+  ]);
+  const checked = new Set(allComments.filter(c => defaultChecked.has(c.name)).map(c => c.name));
 
   function renderChecklist() {
     let html = '';
@@ -510,11 +518,11 @@ function showChecklist(categories) {
     cancelBtn.onclick = hideOverlay;
 
     const deleteBtn = document.createElement('button');
-    deleteBtn.textContent = 'Delete ' + checked.size;
+    deleteBtn.textContent = 'Delete ' + allComments.filter(c => defaultChecked.has(c.name)).length;
     Object.assign(deleteBtn.style, { padding: '8px 20px', background: '#d00', color: '#fff',
       border: 'none', borderRadius: '4px', cursor: 'pointer', fontWeight: 'bold' });
     deleteBtn.onclick = async () => {
-      const toDelete = allDelete.filter(c => checked.has(c.name));
+      const toDelete = allComments.filter(c => checked.has(c.name));
 
       if (!toDelete.length) {
         overlayStatusEl.innerHTML += '<br><br>Nothing to delete.';
