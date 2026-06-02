@@ -95,6 +95,7 @@ fi
 
 echo
 echo "=== Tagging v$meta_ver ==="
+git push origin main
 git tag -a "v$meta_ver" -m "v$meta_ver"
 git push origin "v$meta_ver"
 
