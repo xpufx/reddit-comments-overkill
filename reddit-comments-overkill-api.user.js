@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Reddit Comments Overkill (API)
 // @namespace    https://github.com/xpufx/reddit-comments-overkill
-// @version      2.61-api-5
+// @version      2.62-api-5
 // @description  [TEST API] Fetches all comments via JSON API, shows checkbox list, deletes via /api/del
 // @downloadURL  https://github.com/xpufx/reddit-comments-overkill/raw/refs/heads/main/reddit-comments-overkill-api.user.js
 // @updateURL    https://github.com/xpufx/reddit-comments-overkill/raw/refs/heads/main/reddit-comments-overkill-api.user.js
@@ -43,7 +43,7 @@ function shouldDeleteCommentByX(text, xMeansDelete) {
  * CONFIG
  ******************************/
 const SCRIPT_NAME = 'Reddit Comments Overkill (API)';
-const VERSION = '2.61-api-4';
+const VERSION = '2.62-api-4';
 const LOGGING_ENABLED = true;
 const SORTS = ['new', 'hot', 'top', 'controversial'];
 const API_PAGE_LIMIT = 100;
@@ -69,6 +69,7 @@ let overlayEl = null;
 let overlayStatusEl = null;
 let overlayLogEl = null;
 let badgeEl = null;
+let stopRequested = false;
 
 // Persist log across page reloads
 function loadPersistedLog() {
@@ -408,7 +409,7 @@ async function runDeletions(comments, progressCb) {
   let nextPause = rand(LONG_DELAY_AFTER[0], LONG_DELAY_AFTER[1]);
 
   for (let i = 0; i < comments.length; i++) {
-    if (overlayEl === null) { log('Overlay closed, stopping deletions'); break; }
+    if (stopRequested) { log('Stop requested, stopping deletions'); break; }
 
     const c = comments[i];
     const ok = await deleteCommentViaApi(c.name);
@@ -513,9 +514,6 @@ function showChecklist(categories) {
     deleteBtn.onclick = async () => {
       const toDelete = allDelete.filter(c => checked.has(c.name));
 
-      // Hide all buttons during deletion
-      btnRow.innerHTML = '';
-
       if (!toDelete.length) {
         overlayStatusEl.innerHTML += '<br><br>Nothing to delete.';
         const okBtn = document.createElement('button');
@@ -527,7 +525,14 @@ function showChecklist(categories) {
         return;
       }
 
-      // Switch to progress view
+      // Show Stop button during deletion
+      btnRow.innerHTML = '';
+      const stopBtn = document.createElement('button');
+      stopBtn.textContent = 'Stop';
+      Object.assign(stopBtn.style, { padding: '8px 20px', background: '#d00', color: '#fff',
+        border: 'none', borderRadius: '4px', cursor: 'pointer', fontWeight: 'bold' });
+      stopBtn.onclick = () => { stopRequested = true; };
+      btnRow.appendChild(stopBtn);
       overlayStatusEl.style.maxHeight = '';
       overlayStatusEl.style.overflowY = '';
 
@@ -698,11 +703,25 @@ function showConfirmationModal() {
  * MAIN ENTRY POINT
  ******************************/
 async function startFetchAndDelete() {
+  // Reset stop flag for fresh run
+  stopRequested = false;
+
   // Clear persisted log for fresh run
   persistedLog = [];
   savePersistedLog([]);
 
   showFetchProgress();
+
+  // Add Cancel button during fetch
+  const fetchBtnRow = overlayEl?.querySelector('.rco-btn-row');
+  if (fetchBtnRow) {
+    const fetchCancelBtn = document.createElement('button');
+    fetchCancelBtn.textContent = 'Cancel';
+    Object.assign(fetchCancelBtn.style, { padding: '8px 20px', background: '#888', color: '#fff',
+      border: 'none', borderRadius: '4px', cursor: 'pointer' });
+    fetchCancelBtn.onclick = hideOverlay;
+    fetchBtnRow.appendChild(fetchCancelBtn);
+  }
 
   const progressCb = (sort, totalUnique) => {
     updateFetchProgress(sort, totalUnique);
