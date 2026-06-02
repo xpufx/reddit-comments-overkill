@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Reddit Comments Overkill (API)
 // @namespace    https://github.com/xpufx/reddit-comments-overkill
-// @version      2.62-api-5
+// @version      2.63-api-5
 // @description  [TEST API] Fetches all comments via JSON API, shows checkbox list, deletes via /api/del
 // @downloadURL  https://github.com/xpufx/reddit-comments-overkill/raw/refs/heads/main/reddit-comments-overkill-api.user.js
 // @updateURL    https://github.com/xpufx/reddit-comments-overkill/raw/refs/heads/main/reddit-comments-overkill-api.user.js
@@ -43,7 +43,7 @@ function shouldDeleteCommentByX(text, xMeansDelete) {
  * CONFIG
  ******************************/
 const SCRIPT_NAME = 'Reddit Comments Overkill (API)';
-const VERSION = '2.62-api-4';
+const VERSION = '2.63-api-4';
 const LOGGING_ENABLED = true;
 const SORTS = ['new', 'hot', 'top', 'controversial'];
 const API_PAGE_LIMIT = 100;
@@ -169,6 +169,7 @@ function escapeHtml(str) {
 function showOverlay(title, statusHtml) {
   if (overlayEl) return;
   if (badgeEl) { badgeEl.remove(); badgeEl = null; }
+  btn.style.display = 'none';
 
   overlayEl = document.createElement('div');
   overlayEl.id = 'rco-overlay';
@@ -239,6 +240,7 @@ function updateOverlayStatus(msg) {
 
 function hideOverlay() {
   if (overlayEl) { overlayEl.remove(); overlayEl = null; overlayStatusEl = null; overlayLogEl = null; }
+  btn.style.display = 'flex';
 }
 
 function showBadge() {
@@ -766,7 +768,7 @@ Object.assign(btn.style, {
 document.body.appendChild(btn);
 
 btn.onclick = () => {
-  if (document.querySelector('.rco-confirmation-modal')) return;
+  if (overlayEl || document.querySelector('.rco-confirmation-modal')) return;
   showConfirmationModal();
 };
 

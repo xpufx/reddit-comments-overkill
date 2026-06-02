@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Reddit Comments Overkill (No Redirect)
 // @namespace    https://github.com/xpufx/reddit-comments-overkill
-// @version      2.62-test1
+// @version      2.63-test1
 // @description  [TEST] Same as main script but fetches sort pages without browser redirect — no flash, console preserved
 // @downloadURL  https://github.com/xpufx/reddit-comments-overkill/raw/refs/heads/main/reddit-comments-overkill-noredirect.user.js
 // @updateURL    https://github.com/xpufx/reddit-comments-overkill/raw/refs/heads/main/reddit-comments-overkill-noredirect.user.js
@@ -46,7 +46,7 @@ function shouldDeleteCommentByX(text, xMeansDelete) {
 	 * CONFIG
 	 ************************/
 	const SCRIPT_NAME = "Reddit Comments Overkill";
-	const VERSION = "2.62";
+	const VERSION = "2.63";
 	const LOGGING_ENABLED = true; // Set to false to disable console logging
 	const SORTS = ["new", "hot", "top", "controversial"];
 	const WAIT_FOR_COMMENTS_MS = 8000;
