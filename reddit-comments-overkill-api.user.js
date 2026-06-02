@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Reddit Comments Overkill (API)
 // @namespace    https://github.com/xpufx/reddit-comments-overkill
-// @version      2.63-api-5
+// @version      2.64-api-5
 // @description  [TEST API] Fetches all comments via JSON API, shows checkbox list, deletes via /api/del
 // @downloadURL  https://github.com/xpufx/reddit-comments-overkill/raw/refs/heads/main/reddit-comments-overkill-api.user.js
 // @updateURL    https://github.com/xpufx/reddit-comments-overkill/raw/refs/heads/main/reddit-comments-overkill-api.user.js
@@ -43,7 +43,7 @@ function shouldDeleteCommentByX(text, xMeansDelete) {
  * CONFIG
  ******************************/
 const SCRIPT_NAME = 'Reddit Comments Overkill (API)';
-const VERSION = '2.63-api-4';
+const VERSION = '2.64-api-4';
 const LOGGING_ENABLED = true;
 const SORTS = ['new', 'hot', 'top', 'controversial'];
 const API_PAGE_LIMIT = 100;
@@ -188,8 +188,20 @@ function showOverlay(title, statusHtml) {
     background: '#fff', borderRadius: '10px', padding: '20px 24px',
     width: '480px', minHeight: '200px', maxHeight: '80vh', textAlign: 'center',
     boxShadow: '0 4px 20px rgba(0,0,0,0.3)',
-    display: 'flex', flexDirection: 'column'
+    display: 'flex', flexDirection: 'column', position: 'relative'
   });
+
+  // Close X button — always visible
+  const closeX = document.createElement('span');
+  closeX.textContent = '✕';
+  Object.assign(closeX.style, {
+    position: 'absolute', top: '8px', right: '12px', cursor: 'pointer',
+    fontSize: '18px', color: '#999', fontWeight: 'bold', lineHeight: '1',
+    zIndex: '1'
+  });
+  closeX.onclick = hideOverlay;
+  closeX.title = 'Close';
+  panel.appendChild(closeX);
 
   const logo = document.createElement('img');
   logo.src = LOGO_120;
@@ -551,11 +563,17 @@ function showChecklist(categories) {
       let deleted = 0;
       try {
         deleted = await runDeletions(toDelete, (done, total) => {
-          if (overlayStatusEl) overlayStatusEl.innerHTML += '<br>Progress: ' + done + ' / ' + total;
+          if (overlayStatusEl) {
+            overlayStatusEl.innerHTML += '<br>Progress: ' + done + ' / ' + total;
+            overlayStatusEl.scrollTop = overlayStatusEl.scrollHeight;
+          }
         });
       } catch (e) {
         log('Deletion error:', e);
-        if (overlayStatusEl) overlayStatusEl.innerHTML += '<br>Error: ' + e.message;
+        if (overlayStatusEl) {
+          overlayStatusEl.innerHTML += '<br>Error: ' + e.message;
+          overlayStatusEl.scrollTop = overlayStatusEl.scrollHeight;
+        }
       }
 
       // Append completion
@@ -563,10 +581,11 @@ function showChecklist(categories) {
         overlayStatusEl.innerHTML += '<br><br><span style="font-size:24px;color:#2e7d32">&#10003;</span> ' +
           '<strong style="color:#2e7d32">Done. v' + VERSION + '</strong> ' +
           deleted + ' comments deleted.';
+        overlayStatusEl.scrollTop = overlayStatusEl.scrollHeight;
       }
 
-      // Add OK button (always, even on error)
-      const okBtn = document.createElement('button');
+      // Replace Stop button with OK
+      btnRow.innerHTML = '';
       okBtn.textContent = 'OK';
       Object.assign(okBtn.style, { padding: '8px 20px', background: '#2e7d32', color: '#fff',
         border: 'none', borderRadius: '4px', fontSize: '14px', fontWeight: 'bold', cursor: 'pointer' });
@@ -599,10 +618,15 @@ function showFetchProgress() {
   );
 }
 
-function updateFetchProgress(sort, totalUnique) {
+function updateFetchProgress(sort, totalUnique, completed) {
   const el = document.getElementById('rco-fetch-status');
   if (!el) return;
-  const parts = SORTS.map(s => s + (sort === s ? ' ⟳' : ' ✓'));
+  completed = completed || [];
+  const parts = SORTS.map(s => {
+    if (sort === s) return s + ' ⟳';
+    if (completed.includes(s)) return s + ' ✓';
+    return s + ' ···';
+  });
   el.textContent = 'Fetching: ' + parts.join('  ') + (totalUnique ? '  |  ' + totalUnique + ' unique' : '');
 }
 
@@ -733,8 +757,10 @@ async function startFetchAndDelete() {
     fetchBtnRow.appendChild(fetchCancelBtn);
   }
 
+  const completed = new Set();
   const progressCb = (sort, totalUnique) => {
-    updateFetchProgress(sort, totalUnique);
+    if (sort && totalUnique !== undefined) completed.add(sort);
+    updateFetchProgress(sort, totalUnique, [...completed]);
   };
 
   log('Starting fetch for username: ' + getUsername());
